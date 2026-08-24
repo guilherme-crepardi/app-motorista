@@ -23,6 +23,8 @@ export type CategoriaGasto =
   | 'aluguel_moto'
   | 'financiamento_carro'
   | 'financiamento_moto'
+  | 'ipva'
+  | 'licenciamento'
   | 'outro'
 
 export type Periodicidade = 'diaria' | 'semanal' | 'mensal'

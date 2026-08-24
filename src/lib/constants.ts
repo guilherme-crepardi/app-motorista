@@ -12,6 +12,8 @@ export const CATEGORIAS: { value: CategoriaGasto; label: string; color: string }
   { value: 'pneus', label: 'Pneus', color: '#8b5cf6' },
   { value: 'alimentacao', label: 'Alimentação', color: '#10b981' },
   { value: 'seguro', label: 'Seguro do carro', color: '#06b6d4' },
+  { value: 'ipva', label: 'IPVA', color: '#e11d48' },
+  { value: 'licenciamento', label: 'Licenciamento', color: '#d946ef' },
   { value: 'aluguel_carro', label: 'Aluguel de carro', color: '#3b82f6' },
   { value: 'aluguel_moto', label: 'Aluguel de moto', color: '#6366f1' },
   { value: 'financiamento_carro', label: 'Financiamento de carro', color: '#0ea5e9' },

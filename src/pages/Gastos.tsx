@@ -326,6 +326,21 @@ export default function Gastos() {
               ))}
             </select>
           </div>
+          {form.categoria === 'outro' && (
+            <div className="form-group">
+              <label className="label" htmlFor="gasto-categoria-custom">
+                Nome do gasto
+              </label>
+              <input
+                id="gasto-categoria-custom"
+                className="input"
+                type="text"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                placeholder="Ex.: multa, taxa, serviço..."
+              />
+            </div>
+          )}
           <div className="form-group">
             <label className="label" htmlFor="gasto-valor">
               Valor (R$)
