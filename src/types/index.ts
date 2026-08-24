@@ -45,6 +45,7 @@ export interface Gasto {
   categoria: CategoriaGasto
   valor: number
   descricao: string | null
+  comprovante_url: string | null
   created_at: string
 }
 

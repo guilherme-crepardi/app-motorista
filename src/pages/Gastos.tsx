@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Plus, Pencil, Trash2, Receipt } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Plus, Pencil, Trash2, Receipt, Image, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { CATEGORIAS, categoriaLabel, categoriaColor } from '../lib/constants'
@@ -31,6 +31,10 @@ export default function Gastos() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<Gasto | null>(null)
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null)
+  const [comprovantePreview, setComprovantePreview] = useState<string | null>(null)
+  const [viewingImage, setViewingImage] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function load() {
     if (!user) return
@@ -84,6 +88,8 @@ export default function Gastos() {
   function openNew() {
     setEditing(null)
     setForm(emptyForm)
+    setComprovanteFile(null)
+    setComprovantePreview(null)
     setModalOpen(true)
   }
 
@@ -95,6 +101,8 @@ export default function Gastos() {
       valor: String(gasto.valor),
       descricao: gasto.descricao ?? '',
     })
+    setComprovanteFile(null)
+    setComprovantePreview(gasto.comprovante_url ?? null)
     setModalOpen(true)
   }
 
@@ -104,12 +112,30 @@ export default function Gastos() {
     setSaving(true)
     setError('')
 
+    let comprovanteUrl: string | null = editing?.comprovante_url ?? null
+
+    if (comprovanteFile) {
+      const ext = comprovanteFile.name.split('.').pop() ?? 'jpg'
+      const path = `${user.id}/${Date.now()}.${ext}`
+      const { error: uploadErr } = await supabase.storage
+        .from('comprovantes')
+        .upload(path, comprovanteFile, { upsert: true })
+      if (uploadErr) {
+        setError(uploadErr.message)
+        setSaving(false)
+        return
+      }
+      const { data: urlData } = supabase.storage.from('comprovantes').getPublicUrl(path)
+      comprovanteUrl = urlData.publicUrl
+    }
+
     const payload = {
       user_id: user.id,
       data: form.data,
       categoria: form.categoria,
       valor: Number(form.valor),
       descricao: form.descricao.trim() || null,
+      comprovante_url: comprovanteUrl,
     }
 
     const { error: err } = editing
@@ -235,6 +261,11 @@ export default function Gastos() {
                     <td className="align-right text-danger">{formatCurrency(Number(g.valor))}</td>
                     <td className="align-right">
                       <div className="row-actions">
+                        {g.comprovante_url && (
+                          <button type="button" className="icon-btn" onClick={() => setViewingImage(g.comprovante_url!)} aria-label="Ver comprovante">
+                            <Image size={16} />
+                          </button>
+                        )}
                         <button type="button" className="icon-btn" onClick={() => openEdit(g)} aria-label="Editar">
                           <Pencil size={16} />
                         </button>
@@ -324,6 +355,48 @@ export default function Gastos() {
               placeholder="Ex.: óleo, troca de pneu, almoço..."
             />
           </div>
+          <div className="form-group">
+            <label className="label">Comprovante (opcional)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="input"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null
+                setComprovanteFile(file)
+                if (file) {
+                  const reader = new FileReader()
+                  reader.onload = (ev) => setComprovantePreview(ev.target?.result as string)
+                  reader.readAsDataURL(file)
+                } else {
+                  setComprovantePreview(editing?.comprovante_url ?? null)
+                }
+              }}
+            />
+            {comprovantePreview && (
+              <div style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
+                <img
+                  src={comprovantePreview}
+                  alt="Comprovante"
+                  style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 8, cursor: 'pointer', border: '1px solid var(--border)' }}
+                  onClick={() => setViewingImage(comprovantePreview)}
+                />
+                <button
+                  type="button"
+                  className="icon-btn danger"
+                  style={{ position: 'absolute', top: 4, right: 4 }}
+                  onClick={() => {
+                    setComprovanteFile(null)
+                    setComprovantePreview(null)
+                    if (fileInputRef.current) fileInputRef.current.value = ''
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
               Cancelar
@@ -352,6 +425,16 @@ export default function Gastos() {
             Excluir
           </button>
         </div>
+      </Modal>
+
+      <Modal open={viewingImage !== null} title="Comprovante" onClose={() => setViewingImage(null)}>
+        {viewingImage && (
+          <img
+            src={viewingImage}
+            alt="Comprovante"
+            style={{ width: '100%', borderRadius: 8 }}
+          />
+        )}
       </Modal>
     </div>
   )
