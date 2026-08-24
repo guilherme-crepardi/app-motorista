@@ -27,14 +27,15 @@ import {
   clampPercent,
   sum,
 } from '../lib/utils'
-import type { Ganho, Gasto, Meta, TipoMeta } from '../types'
-import { useDespesasFixas, totalFixoPorCategoria, fixoDiario } from '../lib/despesasFixas'
+import type { Ganho, Gasto, Manutencao, Meta, TipoMeta } from '../types'
+import { useDespesasFixas, totalFixoPorCategoria, totalFixo, fixoDiario } from '../lib/despesasFixas'
 
 export default function Dashboard() {
   const { user } = useAuth()
   const fixas = useDespesasFixas()
   const [ganhos, setGanhos] = useState<Ganho[]>([])
   const [gastos, setGastos] = useState<Gasto[]>([])
+  const [manutencoes, setManutencoes] = useState<Manutencao[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -48,11 +49,13 @@ export default function Dashboard() {
     Promise.all([
       supabase.from('ganhos').select('*').eq('user_id', user.id).gte('data', yearStartISO).order('data'),
       supabase.from('gastos').select('*').eq('user_id', user.id).gte('data', fromISO).order('data'),
+      supabase.from('manutencoes').select('*').eq('user_id', user.id).gte('data', yearStartISO).order('data'),
       supabase.from('metas').select('*').eq('user_id', user.id),
-    ]).then(([g, d, m]) => {
+    ]).then(([g, d, m, mt]) => {
       if (!g.error) setGanhos(g.data ?? [])
       if (!d.error) setGastos(d.data ?? [])
-      if (!m.error) setMetas(m.data ?? [])
+      if (!m.error) setManutencoes(m.data ?? [])
+      if (!mt.error) setMetas(mt.data ?? [])
       setLoading(false)
     })
   }, [user])
@@ -72,6 +75,7 @@ export default function Dashboard() {
     const from = (iso: string) => (x: { data: string }) => x.data >= iso
     const ganhosHoje = ganhos.filter((g) => g.data === todayISOStr)
     const gastosHoje = gastos.filter((g) => g.data === todayISOStr)
+    const yearEnd = `${new Date().getFullYear()}-12-31`
     return {
       ganhosHoje: sum(ganhosHoje.map((g) => Number(g.valor))),
       gastosHoje: sum(gastosHoje.map((g) => Number(g.valor))) + fixoHoje,
@@ -82,8 +86,12 @@ export default function Dashboard() {
       gastosMes:
         sum(gastos.filter(from(toISODate(monthStart))).map((g) => Number(g.valor))) +
         Object.values(fixoMesPorCategoria).reduce((acc, v) => acc + (v ?? 0), 0),
+      gastosAno:
+        sum(gastos.filter(from(yearStart)).map((g) => Number(g.valor))) +
+        sum(manutencoes.filter(from(yearStart)).map((g) => Number(g.valor))) +
+        totalFixo(fixas, yearStart, yearEnd),
     }
-  }, [ganhos, gastos, todayISOStr, weekStart, monthStart, fixoMesPorCategoria, fixoHoje, yearStart])
+  }, [ganhos, gastos, manutencoes, todayISOStr, weekStart, monthStart, fixoMesPorCategoria, fixoHoje, yearStart, fixas])
 
   const chartData = useMemo(
     () =>
@@ -186,6 +194,15 @@ export default function Dashboard() {
           <div>
             <p className="stat-label">Ganhos do ano</p>
             <p className="stat-value">{formatCurrency(totals.ganhosAno)}</p>
+          </div>
+        </div>
+        <div className="card stat-card stat-negative">
+          <div className="stat-icon">
+            <TrendingDown size={20} />
+          </div>
+          <div>
+            <p className="stat-label">Gastos do ano</p>
+            <p className="stat-value">{formatCurrency(totals.gastosAno)}</p>
           </div>
         </div>
       </section>
