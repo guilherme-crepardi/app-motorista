@@ -1463,10 +1463,16 @@ body {
 
   .toolbar-filters {
     align-items: stretch;
+    flex-direction: column;
   }
 
   .period-tabs {
     align-self: auto;
+    width: 100%;
+  }
+
+  .period-tabs .tab {
+    flex: 1;
   }
 
   .toolbar-total {
@@ -1509,6 +1515,37 @@ body {
 
   .modal {
     max-width: none;
+  }
+
+  .historico-head {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .historico-head .stat-label {
+    font-size: 12px;
+    width: 100%;
+  }
+
+  .historico-head .stat-value {
+    font-size: 17px;
+  }
+
+  .historico-head-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .breakdown-head {
+    font-size: 13px;
+  }
+
+  .breakdown-head strong {
+    font-size: 13px;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
   }
 }
 
