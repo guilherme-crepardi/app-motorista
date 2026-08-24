@@ -41,14 +41,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return
-    const from = new Date()
-    from.setDate(from.getDate() - 29)
-    const fromISO = toISODate(startOfDay(from))
     const yearStartISO = `${new Date().getFullYear()}-01-01`
 
     Promise.all([
       supabase.from('ganhos').select('*').eq('user_id', user.id).gte('data', yearStartISO).order('data'),
-      supabase.from('gastos').select('*').eq('user_id', user.id).gte('data', fromISO).order('data'),
+      supabase.from('gastos').select('*').eq('user_id', user.id).gte('data', yearStartISO).order('data'),
       supabase.from('manutencoes').select('*').eq('user_id', user.id).gte('data', yearStartISO).order('data'),
       supabase.from('metas').select('*').eq('user_id', user.id),
     ]).then(([g, d, m, mt]) => {
