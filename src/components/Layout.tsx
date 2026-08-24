@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { applyTheme, getInitialTheme, type Theme } from '../lib/theme'
 import { useAuth } from '../contexts/AuthContext'
 import { syncHistorico } from '../lib/historico'
+import { syncHistoricoGastos } from '../lib/historicoGastos'
 import { fetchTema, salvarTema } from '../lib/preferencias'
 
 const navItems = [
@@ -34,6 +35,7 @@ export default function Layout() {
   useEffect(() => {
     if (user) {
       syncHistorico(user.id)
+      syncHistoricoGastos(user.id)
       fetchTema(user.id).then((tema) => {
         if (tema && !userTouchedTheme.current) setTheme(tema)
       })

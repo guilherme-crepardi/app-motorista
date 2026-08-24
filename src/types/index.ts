@@ -63,6 +63,17 @@ export interface HistoricoGanhos {
   created_at: string
 }
 
+export interface HistoricoGastos {
+  id: string
+  user_id: string
+  mes: string
+  total: number
+  total_gastos: number
+  total_manutencoes: number
+  total_fixas: number
+  created_at: string
+}
+
 export interface Meta {
   id: string
   user_id: string
