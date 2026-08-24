@@ -43,9 +43,10 @@ export default function Dashboard() {
     const from = new Date()
     from.setDate(from.getDate() - 29)
     const fromISO = toISODate(startOfDay(from))
+    const yearStartISO = `${new Date().getFullYear()}-01-01`
 
     Promise.all([
-      supabase.from('ganhos').select('*').eq('user_id', user.id).gte('data', fromISO).order('data'),
+      supabase.from('ganhos').select('*').eq('user_id', user.id).gte('data', yearStartISO).order('data'),
       supabase.from('gastos').select('*').eq('user_id', user.id).gte('data', fromISO).order('data'),
       supabase.from('metas').select('*').eq('user_id', user.id),
     ]).then(([g, d, m]) => {
@@ -65,6 +66,8 @@ export default function Dashboard() {
   const fixoMesPorCategoria = totalFixoPorCategoria(fixas, `${monthISO}-01`, toISODate(lastDay))
   const fixoHoje = fixoDiario(fixas)
 
+  const yearStart = `${new Date().getFullYear()}-01-01`
+
   const totals = useMemo(() => {
     const from = (iso: string) => (x: { data: string }) => x.data >= iso
     const ganhosHoje = ganhos.filter((g) => g.data === todayISOStr)
@@ -74,12 +77,13 @@ export default function Dashboard() {
       gastosHoje: sum(gastosHoje.map((g) => Number(g.valor))) + fixoHoje,
       ganhosSemana: sum(ganhos.filter(from(toISODate(weekStart))).map((g) => Number(g.valor))),
       ganhosMes: sum(ganhos.filter(from(toISODate(monthStart))).map((g) => Number(g.valor))),
+      ganhosAno: sum(ganhos.filter(from(yearStart)).map((g) => Number(g.valor))),
       kmMes: sum(ganhos.filter(from(toISODate(monthStart))).map((g) => Number(g.km ?? 0))),
       gastosMes:
         sum(gastos.filter(from(toISODate(monthStart))).map((g) => Number(g.valor))) +
         Object.values(fixoMesPorCategoria).reduce((acc, v) => acc + (v ?? 0), 0),
     }
-  }, [ganhos, gastos, todayISOStr, weekStart, monthStart, fixoMesPorCategoria, fixoHoje])
+  }, [ganhos, gastos, todayISOStr, weekStart, monthStart, fixoMesPorCategoria, fixoHoje, yearStart])
 
   const chartData = useMemo(
     () =>
@@ -173,6 +177,15 @@ export default function Dashboard() {
             <p className="stat-sub">
               Gastos: {formatCurrency(totals.gastosMes)} · Km: {totals.kmMes} km
             </p>
+          </div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-icon">
+            <TrendingUp size={20} />
+          </div>
+          <div>
+            <p className="stat-label">Ganhos do ano</p>
+            <p className="stat-value">{formatCurrency(totals.ganhosAno)}</p>
           </div>
         </div>
       </section>

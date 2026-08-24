@@ -19,8 +19,6 @@ function resumoDoMes(mes: string, ganhos: Ganho[], userId: string) {
 }
 
 export async function syncHistorico(userId: string): Promise<void> {
-  const currentMonth = new Date().toISOString().slice(0, 7)
-
   const { data: ganhos, error } = await supabase
     .from('ganhos')
     .select('*')
@@ -31,27 +29,18 @@ export async function syncHistorico(userId: string): Promise<void> {
   const byMonth = new Map<string, Ganho[]>()
   for (const g of ganhos) {
     const mes = g.data.slice(0, 7)
-    if (mes >= currentMonth) continue
     if (!byMonth.has(mes)) byMonth.set(mes, [])
     byMonth.get(mes)!.push(g)
   }
   if (byMonth.size === 0) return
 
-  const { data: existentes } = await supabase
-    .from('historico_ganhos')
-    .select('mes')
-    .eq('user_id', userId)
-
-  const jaSalvos = new Set((existentes ?? []).map((h) => h.mes))
-
-  const aInserir = []
+  const aResumo = []
   for (const [mes, lista] of byMonth) {
-    if (jaSalvos.has(mes)) continue
-    aInserir.push(resumoDoMes(mes, lista, userId))
+    aResumo.push(resumoDoMes(mes, lista, userId))
   }
 
-  if (aInserir.length > 0) {
-    await supabase.from('historico_ganhos').insert(aInserir)
+  if (aResumo.length > 0) {
+    await supabase.from('historico_ganhos').upsert(aResumo, { onConflict: 'user_id,mes' })
   }
 }
 
