@@ -25,6 +25,7 @@ export default function Gastos() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [month, setMonth] = useState(currentMonthISO())
+  const [todosMeses, setTodosMeses] = useState(false)
   const [categoriaFilter, setCategoriaFilter] = useState<'todas' | CategoriaGasto>('todas')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Gasto | null>(null)
@@ -39,13 +40,17 @@ export default function Gastos() {
   async function load() {
     if (!user) return
     setLoading(true)
-    const { data, error: err } = await supabase
+    let query = supabase
       .from('gastos')
       .select('*')
       .eq('user_id', user.id)
-      .gte('data', `${month}-01`)
-      .lte('data', lastDayOfMonthISO(month))
       .order('data', { ascending: false })
+    if (!todosMeses) {
+      query = query
+        .gte('data', `${month}-01`)
+        .lte('data', lastDayOfMonthISO(month))
+    }
+    const { data, error: err } = await query
     if (err) setError(err.message)
     else setGastos(data ?? [])
     setLoading(false)
@@ -54,19 +59,23 @@ export default function Gastos() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, month])
+  }, [user, month, todosMeses])
 
   const filtered = useMemo(
     () => (categoriaFilter === 'todas' ? gastos : gastos.filter((g) => g.categoria === categoriaFilter)),
     [gastos, categoriaFilter],
   )
 
-  const fixoPorCategoria = useMemo(() => totalFixoPorCategoria(fixas, `${month}-01`, lastDayOfMonthISO(month)), [fixas, month])
+  const fixoPorCategoria = useMemo(() => {
+    if (todosMeses) return {}
+    return totalFixoPorCategoria(fixas, `${month}-01`, lastDayOfMonthISO(month))
+  }, [fixas, month, todosMeses])
 
   const fixoTotal = useMemo(() => {
+    if (todosMeses) return 0
     if (categoriaFilter === 'todas') return totalFixo(fixas, `${month}-01`, lastDayOfMonthISO(month))
     return fixoPorCategoria[categoriaFilter] ?? 0
-  }, [fixas, month, categoriaFilter, fixoPorCategoria])
+  }, [fixas, month, categoriaFilter, fixoPorCategoria, todosMeses])
 
   const total = sum(filtered.map((g) => Number(g.valor))) + fixoTotal
 
@@ -178,7 +187,21 @@ export default function Gastos() {
             <label className="label" htmlFor="month">
               Período
             </label>
-            <MonthPicker value={month} onChange={setMonth} />
+            {!todosMeses ? (
+              <MonthPicker value={month} onChange={setMonth} />
+            ) : (
+              <input className="input" type="text" value="Todos os meses" disabled />
+            )}
+          </div>
+          <div className="form-group">
+            <label className="label">&nbsp;</label>
+            <button
+              type="button"
+              className={`btn ${todosMeses ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => setTodosMeses(!todosMeses)}
+            >
+              {todosMeses ? 'Filtrar mês' : 'Todos os meses'}
+            </button>
           </div>
           <div className="form-group">
             <label className="label" htmlFor="categoria-filter">
@@ -200,9 +223,9 @@ export default function Gastos() {
           </div>
         </div>
         <div className="toolbar-total">
-          <span>Total do mês</span>
+          <span>{todosMeses ? 'Total geral' : 'Total do mês'}</span>
           <strong>{formatCurrency(total)}</strong>
-          {fixoTotal > 0 && <span className="toolbar-sub">inclui {formatCurrency(fixoTotal)} automáticos (despesas fixas)</span>}
+          {!todosMeses && fixoTotal > 0 && <span className="toolbar-sub">inclui {formatCurrency(fixoTotal)} automáticos (despesas fixas)</span>}
         </div>
       </div>
 
