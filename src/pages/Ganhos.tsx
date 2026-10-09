@@ -171,7 +171,7 @@ export default function Ganhos() {
     setForm({
       data: ganho.data,
       plataforma: ganho.plataforma,
-      valor: String(ganho.valor),
+      valor: formatValorInput(String(Math.round(Number(ganho.valor) * 100))),
       corridas: ganho.corridas != null ? String(ganho.corridas) : '',
       horas: ganho.horas_trabalhadas != null ? horasToText(ganho.horas_trabalhadas) : '',
       km: ganho.km != null ? String(ganho.km) : '',
@@ -190,7 +190,7 @@ export default function Ganhos() {
       user_id: user.id,
       data: form.data,
       plataforma: form.plataforma,
-      valor: Number(form.valor),
+      valor: parseValor(form.valor),
       corridas: form.corridas ? Number(form.corridas) : null,
       horas_trabalhadas: textToHoras(form.horas),
       km: form.km ? Number(form.km) : null,
@@ -549,12 +549,12 @@ export default function Ganhos() {
               <input
                 id="ganho-valor"
                 className="input input-large"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 required
                 value={form.valor}
-                onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                onChange={(e) => setForm({ ...form, valor: formatValorInput(e.target.value) })}
+                onBlur={() => setForm((current) => ({ ...current, valor: completeValorInput(current.valor) }))}
                 placeholder="Ex.: 150,00"
               />
             </div>
@@ -634,8 +634,8 @@ export default function Ganhos() {
                 type="text"
                 inputMode="decimal"
                 value={form.horas}
-                onChange={(e) => setForm({ ...form, horas: e.target.value })}
-                placeholder="Ex.: 8 ou 8:30"
+                onChange={(e) => setForm({ ...form, horas: formatHorasInput(e.target.value) })}
+                placeholder="Ex.: 8:30"
               />
             </div>
           </div>
