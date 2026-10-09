@@ -72,8 +72,7 @@ function formatHorasInput(text: string): string {
   const digits = text.replace(/\D/g, '').slice(0, 4)
   if (!digits) return ''
   if (digits.length <= 2) return digits
-  const padded = digits.padStart(4, '0')
-  return `${padded.slice(0, -2)}:${padded.slice(-2)}`
+  return `${digits.slice(0, -2)}:${digits.slice(-2)}`
 }
 
 export default function Ganhos() {
