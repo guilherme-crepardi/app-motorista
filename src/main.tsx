@@ -6,8 +6,17 @@ import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { applyTheme, getInitialTheme } from './lib/theme'
+import { registerSW } from 'virtual:pwa-register'
 
 applyTheme(getInitialTheme())
+
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    window.location.reload()
+  },
+  onOfflineReady() {},
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

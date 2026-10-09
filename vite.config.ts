@@ -10,10 +10,10 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Planejamento Motorista',
-        short_name: 'Motorista',
+        name: 'App Motorista',
+        short_name: 'App Motorista',
         description:
-          'Planejamento Motorista - controle seus ganhos, gastos e metas como motorista de aplicativo',
+          'App Motorista - controle seus ganhos, gastos e metas como motorista de aplicativo',
         lang: 'pt-BR',
         start_url: '/',
         scope: '/',
@@ -32,6 +32,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         navigateFallback: '/index.html',
       },
