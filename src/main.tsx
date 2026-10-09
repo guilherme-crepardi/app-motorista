@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './contexts/AuthContext'
+import { LanguageProvider } from './contexts/LanguageContext'
 import { applyTheme, getInitialTheme } from './lib/theme'
 
 applyTheme(getInitialTheme())
@@ -11,9 +12,11 @@ applyTheme(getInitialTheme())
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   </StrictMode>,
 )

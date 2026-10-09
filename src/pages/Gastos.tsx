@@ -8,6 +8,7 @@ import { useDespesasFixas, totalFixo, totalFixoPorCategoria } from '../lib/despe
 import Modal from '../components/Modal'
 import MonthPicker from '../components/MonthPicker'
 import type { Gasto, CategoriaGasto } from '../types'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface FormState {
   data: string
@@ -20,6 +21,7 @@ const emptyForm: FormState = { data: todayISO(), categoria: 'combustivel', valor
 
 export default function Gastos() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const fixas = useDespesasFixas()
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [loading, setLoading] = useState(true)
@@ -78,21 +80,6 @@ export default function Gastos() {
   }, [fixas, month, categoriaFilter, fixoPorCategoria, todosMeses])
 
   const total = sum(filtered.map((g) => Number(g.valor))) + fixoTotal
-
-  const byCategoria = useMemo(() => {
-    const map = new Map<CategoriaGasto, number>()
-    filtered.forEach((g) => map.set(g.categoria, (map.get(g.categoria) ?? 0) + Number(g.valor)))
-    CATEGORIAS.forEach(({ value }) => {
-      const fixo = categoriaFilter === 'todas' || categoriaFilter === value ? (fixoPorCategoria[value] ?? 0) : 0
-      if (fixo > 0) map.set(value, (map.get(value) ?? 0) + fixo)
-    })
-    return CATEGORIAS.map(({ value, label, color }) => ({
-      value,
-      label,
-      color,
-      total: map.get(value) ?? 0,
-    }))
-  }, [filtered, fixoPorCategoria, categoriaFilter])
 
   function openNew() {
     setEditing(null)
@@ -172,25 +159,31 @@ export default function Gastos() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Gastos</h1>
-          <p className="page-subtitle">Combustível, manutenção, pneus, alimentação e outros</p>
+          <h1>{t('expenses')}</h1>
+          <p className="page-subtitle">{t('expenseSubtitle')}</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={openNew}>
+        <button type="button" className="btn btn-primary btn-large" onClick={openNew}>
           <Plus size={18} />
-          Novo gasto
+          {t('registerExpense')}
         </button>
       </header>
 
-      <div className="card toolbar">
-        <div className="form-row">
+      <section className="card gastos-total-card">
+        <span>{todosMeses ? t('totalGeneral') : t('totalMonth')}</span>
+        <strong className="text-danger">{formatCurrency(total)}</strong>
+        {!todosMeses && fixoTotal > 0 && <small>{t('includesFixedExpenses').replace('{value}', formatCurrency(fixoTotal))}</small>}
+      </section>
+
+      <div className="card toolbar gastos-toolbar">
+        <div className="gastos-filter-row">
           <div className="form-group">
             <label className="label" htmlFor="month">
-              Período
+              {t('period')}
             </label>
             {!todosMeses ? (
               <MonthPicker value={month} onChange={setMonth} />
             ) : (
-              <input className="input" type="text" value="Todos os meses" disabled />
+              <input className="input" type="text" value={t('allMonths')} disabled />
             )}
           </div>
           <div className="form-group">
@@ -200,12 +193,12 @@ export default function Gastos() {
               className={`btn ${todosMeses ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setTodosMeses(!todosMeses)}
             >
-              {todosMeses ? 'Filtrar mês' : 'Todos os meses'}
+              {todosMeses ? t('filterMonth') : t('everything')}
             </button>
           </div>
           <div className="form-group">
             <label className="label" htmlFor="categoria-filter">
-              Categoria
+              {t('category')}
             </label>
             <select
               id="categoria-filter"
@@ -213,7 +206,7 @@ export default function Gastos() {
               value={categoriaFilter}
               onChange={(e) => setCategoriaFilter(e.target.value as 'todas' | CategoriaGasto)}
             >
-              <option value="todas">Todas</option>
+              <option value="todas">{t('all')}</option>
               {CATEGORIAS.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
@@ -222,106 +215,61 @@ export default function Gastos() {
             </select>
           </div>
         </div>
-        <div className="toolbar-total">
-          <span>{todosMeses ? 'Total geral' : 'Total do mês'}</span>
-          <strong>{formatCurrency(total)}</strong>
-          {!todosMeses && fixoTotal > 0 && <span className="toolbar-sub">inclui {formatCurrency(fixoTotal)} automáticos (despesas fixas)</span>}
-        </div>
       </div>
-
-      {byCategoria.some((c) => c.total > 0) && (
-        <div className="cards-grid small">
-          {byCategoria
-            .filter((c) => c.total > 0)
-            .map((c) => (
-              <div className="card stat-card" key={c.value}>
-                <span className="dot" style={{ background: c.color }} />
-                <div>
-                  <p className="stat-label">{c.label}</p>
-                  <p className="stat-value">{formatCurrency(c.total)}</p>
-                </div>
-              </div>
-            ))}
-        </div>
-      )}
 
       {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
-        <div className="page-loading">Carregando...</div>
+        <div className="page-loading">{t('loading')}</div>
       ) : filtered.length === 0 ? (
         <div className="card empty-state">
           <Receipt size={32} />
-          <p>Nenhum gasto registrado neste período.</p>
+          <p>{t('noExpensesPeriod')}</p>
           <button type="button" className="btn btn-secondary" onClick={openNew}>
             <Plus size={16} />
-            Registrar gasto
+            {t('registerExpense')}
           </button>
         </div>
       ) : (
-        <div className="card table-card">
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Categoria</th>
-                  <th>Descrição</th>
-                  <th className="align-right">Valor</th>
-                  <th className="align-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((g) => (
-                  <tr key={g.id}>
-                    <td>{formatDateBR(g.data)}</td>
-                    <td>
-                      <span className="badge" style={{ color: categoriaColor(g.categoria) }}>
-                        {categoriaLabel(g.categoria)}
-                      </span>
-                    </td>
-                    <td className="cell-muted">{g.descricao || '—'}</td>
-                    <td className="align-right text-danger">{formatCurrency(Number(g.valor))}</td>
-                    <td className="align-right">
-                      <div className="row-actions">
-                        {g.comprovante_url && (
-                          <button type="button" className="icon-btn" onClick={() => setViewingImage(g.comprovante_url!)} aria-label="Ver comprovante">
-                            <Image size={16} />
-                          </button>
-                        )}
-                        <button type="button" className="icon-btn" onClick={() => openEdit(g)} aria-label="Editar">
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-btn danger"
-                          onClick={() => setConfirmDelete(g)}
-                          aria-label="Excluir"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={3}>Total</td>
-                  <td className="align-right text-danger">{formatCurrency(total)}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
+        <section className="gastos-list" aria-label="Gastos registrados">
+          {filtered.map((g) => (
+            <article className="card gasto-card" key={g.id}>
+              <div className="gasto-card-main">
+                <div>
+                  <span className="badge" style={{ color: categoriaColor(g.categoria) }}>
+                    {categoriaLabel(g.categoria)}
+                  </span>
+                  <strong>{formatCurrency(Number(g.valor))}</strong>
+                  <small>{formatDateBR(g.data)}</small>
+                  {g.descricao && <p>{g.descricao}</p>}
+                </div>
+                <div className="gasto-card-actions">
+                  {g.comprovante_url && (
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewingImage(g.comprovante_url!)}>
+                      <Image size={15} />
+                      {t('view')}
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(g)}>
+                    <Pencil size={15} />
+                    {t('edit')}
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm btn-soft-danger" onClick={() => setConfirmDelete(g)}>
+                    <Trash2 size={15} />
+                    {t('delete')}
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
       )}
 
-      <Modal open={modalOpen} title={editing ? 'Editar gasto' : 'Novo gasto'} onClose={() => setModalOpen(false)}>
+      <Modal open={modalOpen} title={editing ? t('editExpense') : t('newExpense')} onClose={() => setModalOpen(false)}>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="label" htmlFor="gasto-data">
-              Data
+              {t('date')}
             </label>
             <input
               id="gasto-data"
@@ -334,7 +282,7 @@ export default function Gastos() {
           </div>
           <div className="form-group">
             <label className="label" htmlFor="gasto-categoria">
-              Categoria
+              {t('category')}
             </label>
             <select
               id="gasto-categoria"
@@ -352,7 +300,7 @@ export default function Gastos() {
           {form.categoria === 'outro' && (
             <div className="form-group">
               <label className="label" htmlFor="gasto-categoria-custom">
-                Nome do gasto
+                {t('expenseName')}
               </label>
               <input
                 id="gasto-categoria-custom"
@@ -366,7 +314,7 @@ export default function Gastos() {
           )}
           <div className="form-group">
             <label className="label" htmlFor="gasto-valor">
-              Valor (R$)
+              {t('receivedValue')}
             </label>
             <input
               id="gasto-valor"
@@ -382,7 +330,7 @@ export default function Gastos() {
           </div>
           <div className="form-group">
             <label className="label" htmlFor="gasto-descricao">
-              Descrição
+              {t('description')}
             </label>
             <input
               id="gasto-descricao"
@@ -394,7 +342,7 @@ export default function Gastos() {
             />
           </div>
           <div className="form-group">
-            <label className="label">Comprovante (opcional)</label>
+            <label className="label">{t('receiptOptional')}</label>
             <input
               ref={fileInputRef}
               type="file"
@@ -416,7 +364,7 @@ export default function Gastos() {
               <div style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
                 <img
                   src={comprovantePreview}
-                  alt="Comprovante"
+                  alt={t('receipt')}
                   style={{ maxWidth: '100%', maxHeight: 150, borderRadius: 8, cursor: 'pointer', border: '1px solid var(--border)' }}
                   onClick={() => setViewingImage(comprovantePreview)}
                 />
@@ -437,10 +385,10 @@ export default function Gastos() {
           </div>
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
-              Cancelar
+              {t('cancel')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? t('saving') : t('save')}
             </button>
           </div>
         </form>
@@ -448,7 +396,7 @@ export default function Gastos() {
 
       <Modal
         open={confirmDelete !== null}
-        title="Excluir gasto"
+        title={t('deleteExpense')}
         onClose={() => setConfirmDelete(null)}
       >
         <p className="modal-text">
@@ -457,19 +405,19 @@ export default function Gastos() {
         </p>
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
-            Cancelar
+            {t('cancel')}
           </button>
           <button type="button" className="btn btn-danger" onClick={handleDelete}>
-            Excluir
+            {t('delete')}
           </button>
         </div>
       </Modal>
 
-      <Modal open={viewingImage !== null} title="Comprovante" onClose={() => setViewingImage(null)}>
+      <Modal open={viewingImage !== null} title={t('receipt')} onClose={() => setViewingImage(null)}>
         {viewingImage && (
           <img
             src={viewingImage}
-            alt="Comprovante"
+            alt={t('receipt')}
             style={{ width: '100%', borderRadius: 8 }}
           />
         )}

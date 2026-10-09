@@ -7,9 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:debug": "npm run android:sync && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-build.ps1 debug",
+    "android:bundle": "npm run android:sync && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/android-build.ps1 bundle"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@supabase/supabase-js": "^2.112.2",
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",

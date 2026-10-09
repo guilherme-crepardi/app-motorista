@@ -6,6 +6,7 @@ import { CATEGORIAS, categoriaLabel, categoriaColor, PERIODICIDADES, periodicida
 import { formatCurrency } from '../lib/utils'
 import Modal from '../components/Modal'
 import type { CategoriaGasto, DespesaFixa, Periodicidade } from '../types'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface FormState {
   categoria: CategoriaGasto
@@ -19,6 +20,7 @@ const emptyForm: FormState = { categoria: 'seguro', valor: '', periodicidade: 'd
 
 export default function DespesasFixas() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [fixas, setFixas] = useState<DespesaFixa[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -108,28 +110,26 @@ export default function DespesasFixas() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Despesas Fixas</h1>
-          <p className="page-subtitle">
-            Cadastre gastos que se repetem (ex.: seguro R$ 10/dia) e o app soma automaticamente nos totais
-          </p>
+          <h1>{t('fixedExpenses')}</h1>
+          <p className="page-subtitle">{t('fixedExpenseSubtitle')}</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={openNew}>
           <Plus size={18} />
-          Nova despesa fixa
+          {t('newFixedExpense')}
         </button>
       </header>
 
       {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
-        <div className="page-loading">Carregando...</div>
+        <div className="page-loading">{t('loading')}</div>
       ) : fixas.length === 0 ? (
         <div className="card empty-state">
           <Repeat size={32} />
-          <p>Nenhuma despesa fixa cadastrada.</p>
+          <p>{t('noFixedExpense')}</p>
           <button type="button" className="btn btn-secondary" onClick={openNew}>
             <Plus size={16} />
-            Cadastrar despesa fixa
+            {t('registerFixedExpense')}
           </button>
         </div>
       ) : (
@@ -149,15 +149,15 @@ export default function DespesasFixas() {
                   type="button"
                   className={`toggle ${f.ativo ? 'on' : ''}`}
                   onClick={() => toggleAtivo(f)}
-                  aria-label={f.ativo ? 'Desativar' : 'Ativar'}
-                  title={f.ativo ? 'Ativa' : 'Pausada'}
+                  aria-label={f.ativo ? t('deactivate') : t('activate')}
+                  title={f.ativo ? t('active') : t('paused')}
                 >
                   <span className="toggle-dot" />
                 </button>
-                <button type="button" className="icon-btn" onClick={() => openEdit(f)} aria-label="Editar">
+                <button type="button" className="icon-btn" onClick={() => openEdit(f)} aria-label={t('edit')}>
                   <Pencil size={16} />
                 </button>
-                <button type="button" className="icon-btn danger" onClick={() => setConfirmDelete(f)} aria-label="Excluir">
+                <button type="button" className="icon-btn danger" onClick={() => setConfirmDelete(f)} aria-label={t('delete')}>
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -168,14 +168,14 @@ export default function DespesasFixas() {
 
       <Modal
         open={modalOpen}
-        title={editing ? 'Editar despesa fixa' : 'Nova despesa fixa'}
+        title={editing ? t('editFixedExpense') : t('newFixedExpense')}
         onClose={() => setModalOpen(false)}
       >
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group">
               <label className="label" htmlFor="fixa-categoria">
-                Categoria
+                {t('category')}
               </label>
               <select
                 id="fixa-categoria"
@@ -192,7 +192,7 @@ export default function DespesasFixas() {
             </div>
             <div className="form-group">
               <label className="label" htmlFor="fixa-valor">
-                Valor (R$)
+                {t('receivedValue')}
               </label>
               <input
                 id="fixa-valor"
@@ -210,7 +210,7 @@ export default function DespesasFixas() {
 
           <div className="form-group">
             <label className="label" htmlFor="fixa-periodicidade">
-              Repetição
+              {t('repeat')}
             </label>
             <select
               id="fixa-periodicidade"
@@ -224,12 +224,12 @@ export default function DespesasFixas() {
                 </option>
               ))}
             </select>
-            <p className="input-hint">"Por dia" soma o valor a cada dia do período; "Por semana" a cada semana; "Por mês" a cada mês.</p>
+            <p className="input-hint">{t('repeatHint')}</p>
           </div>
 
           <div className="form-group">
             <label className="label" htmlFor="fixa-descricao">
-              Descrição
+              {t('description')}
             </label>
             <input
               id="fixa-descricao"
@@ -248,22 +248,22 @@ export default function DespesasFixas() {
                 checked={form.ativo}
                 onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
               />
-              Ativa (incluir nos totais)
+              {t('activeIncludeTotals')}
             </label>
           </div>
 
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
-              Cancelar
+              {t('cancel')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? t('saving') : t('save')}
             </button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={confirmDelete !== null} title="Excluir despesa fixa" onClose={() => setConfirmDelete(null)}>
+      <Modal open={confirmDelete !== null} title={t('deleteFixedExpense')} onClose={() => setConfirmDelete(null)}>
         <p className="modal-text">
           Tem certeza que deseja excluir a despesa fixa de{' '}
           {confirmDelete ? categoriaLabel(confirmDelete.categoria) : ''} de{' '}
@@ -271,10 +271,10 @@ export default function DespesasFixas() {
         </p>
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
-            Cancelar
+            {t('cancel')}
           </button>
           <button type="button" className="btn btn-danger" onClick={handleDelete}>
-            Excluir
+            {t('delete')}
           </button>
         </div>
       </Modal>

@@ -9,6 +9,7 @@ import { formatCurrency, formatMonthBR, currentMonthISO, sum } from '../lib/util
 import type { HistoricoGanhos, HistoricoGastos } from '../types'
 import Modal from '../components/Modal'
 import MonthPicker from '../components/MonthPicker'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface FormState {
   mes: string
@@ -33,6 +34,7 @@ type Filtro = 'mensal' | 'anual'
 
 export default function Historico() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [tab, setTab] = useState<Tab>('ganhos')
   const [filtro, setFiltro] = useState<Filtro>('mensal')
   const [anoFilter, setAnoFilter] = useState(new Date().getFullYear())
@@ -46,6 +48,7 @@ export default function Historico() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<HistoricoGanhos | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!user) return
@@ -63,7 +66,7 @@ export default function Historico() {
     try {
       await Promise.all([syncHistorico(user.id), syncHistoricoGastos(user.id)])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar histórico')
+      setError(err instanceof Error ? err.message : t('unexpectedError'))
     }
     await load()
     setSyncing(false)
@@ -186,18 +189,18 @@ export default function Historico() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Histórico</h1>
-          <p className="page-subtitle">Resumo de ganhos e gastos — atualizado automaticamente</p>
+          <h1>{t('history')}</h1>
+          <p className="page-subtitle">{t('historySubtitle')}</p>
         </div>
         <div className="page-header-actions">
           <button type="button" className="btn btn-secondary" onClick={atualizar} disabled={syncing}>
             <RefreshCw size={18} className={syncing ? 'spin' : ''} />
-            {syncing ? 'Atualizando...' : 'Atualizar'}
+            {syncing ? t('refreshing') : t('refresh')}
           </button>
           {tab === 'ganhos' && (
             <button type="button" className="btn btn-primary" onClick={openNew}>
               <Plus size={18} />
-              Nova entrada
+              {t('newEntry')}
             </button>
           )}
         </div>
@@ -207,22 +210,22 @@ export default function Historico() {
         <div className="toolbar-filters">
           <div className="period-tabs">
             <button type="button" className={tab === 'ganhos' ? 'tab active' : 'tab'} onClick={() => setTab('ganhos')}>
-              Ganhos
+              {t('earnings')}
             </button>
             <button type="button" className={tab === 'gastos' ? 'tab active' : 'tab'} onClick={() => setTab('gastos')}>
-              Gastos
+              {t('expenses')}
             </button>
           </div>
           <div className="period-tabs">
             <button type="button" className={filtro === 'mensal' ? 'tab active' : 'tab'} onClick={() => setFiltro('mensal')}>
-              Mensal
+              {t('monthly')}
             </button>
             <button type="button" className={filtro === 'anual' ? 'tab active' : 'tab'} onClick={() => setFiltro('anual')}>
-              Anual
+              {t('annual')}
             </button>
           </div>
           <div className="form-group">
-            <label className="label">Ano</label>
+            <label className="label">{t('year')}</label>
             <select className="input" value={anoFilter} onChange={(e) => setAnoFilter(Number(e.target.value))}>
               {anosDisponiveis.map((a) => (
                 <option key={a} value={a}>{a}</option>
@@ -231,7 +234,7 @@ export default function Historico() {
           </div>
         </div>
         <div className="toolbar-total">
-          <span>Total do período</span>
+          <span>{t('totalPeriod')}</span>
           <strong className={tab === 'ganhos' ? 'text-success' : 'text-danger'}>
             {formatCurrency(tab === 'ganhos' ? totalPeriodoGanhos : totalPeriodoGastos)}
           </strong>
@@ -242,153 +245,146 @@ export default function Historico() {
       {error && <div className="alert alert-error">{error}</div>}
 
       {loading ? (
-        <div className="page-loading">Carregando...</div>
+        <div className="page-loading">{t('loading')}</div>
       ) : tab === 'ganhos' ? (
         historicoFiltrado.length === 0 ? (
           <div className="card empty-state">
             <History size={32} />
-            <p>Nenhum mês no histórico de ganhos.</p>
-            <p className="stat-sub">Os meses são salvos automaticamente.</p>
+            <p>{t('noEarningsHistory')}</p>
+            <p className="stat-sub">{t('monthsSavedAutomatically')}</p>
           </div>
         ) : (
           <div className="historico-list">
-            {historicoFiltrado.map((h) => (
-              <div className="card stat-card" key={h.id}>
-                <div className="historico-head">
-                  <span className="stat-label">
-                    {filtro === 'mensal' ? formatMonthBR(h.mes) : `${h.mes}`}
-                  </span>
-                  <div className="historico-head-actions">
-                    <span className="stat-value text-success">{formatCurrency(h.total)}</span>
-                    {filtro === 'mensal' && (
-                      <div className="row-actions">
-                        <button type="button" className="icon-btn" onClick={() => openEdit(h)} aria-label="Editar">
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className="icon-btn danger"
-                          onClick={() => setConfirmDelete(h)}
-                          aria-label="Excluir"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    )}
+            {historicoFiltrado.map((h) => {
+              const key = h.id ?? h.mes
+              const expanded = expandedId === key
+              return (
+                <div className="card historico-card compact" key={key}>
+                  <div className="historico-card-main">
+                    <div>
+                      <span>{filtro === 'mensal' ? formatMonthBR(h.mes) : `${h.mes}`}</span>
+                      <strong className="text-success">{formatCurrency(h.total)}</strong>
+                    </div>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setExpandedId(expanded ? null : key)}>
+                      {expanded ? t('hide') : t('details')}
+                    </button>
                   </div>
-                </div>
 
-                <div className="breakdown">
-                  {PLATAFORMAS.map(({ value, label }) => {
-                    const total = value === 'uber' ? h.total_uber : value === '99' ? h.total_99 : h.total_outra
-                    const percent = h.total > 0 ? Math.round((total / h.total) * 100) : 0
-                    return (
-                      <div className="breakdown-row" key={value}>
-                        <div className="breakdown-head">
-                          <span><span className="badge">{label}</span></span>
-                          <span>
-                            <strong>{formatCurrency(total)}</strong>
-                            <span className="breakdown-pct"> · {percent}%</span>
-                          </span>
-                        </div>
-                        <div className="progress">
-                          <div
-                            className="progress-bar"
-                            style={{ width: `${percent}%`, background: plataformaColor(value) }}
-                          />
-                        </div>
+                  {expanded && (
+                    <div className="historico-card-details">
+                      <div className="breakdown compact">
+                        {PLATAFORMAS.map(({ value, label }) => {
+                          const total = value === 'uber' ? h.total_uber : value === '99' ? h.total_99 : h.total_outra
+                          const percent = h.total > 0 ? Math.round((total / h.total) * 100) : 0
+                          return (
+                            <div className="breakdown-row" key={value}>
+                              <div className="breakdown-head">
+                                <span><span className="badge">{label}</span></span>
+                                <span>
+                                  <strong>{formatCurrency(total)}</strong>
+                                  <span className="breakdown-pct"> · {percent}%</span>
+                                </span>
+                              </div>
+                              <div className="progress">
+                                <div
+                                  className="progress-bar"
+                                  style={{ width: `${percent}%`, background: plataformaColor(value) }}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
-                </div>
 
-                {filtro === 'mensal' && (
-                  <div className="historico-meta">
-                    <span>{h.corridas} corridas</span>
-                    <span>{Number(h.horas).toLocaleString('pt-BR')} h</span>
-                  </div>
-                )}
-              </div>
-            ))}
+                      {filtro === 'mensal' && (
+                        <div className="historico-meta">
+                          <span>{h.corridas} {t('rides').toLowerCase()}</span>
+                          <span>{Number(h.horas).toLocaleString('pt-BR')} h</span>
+                        </div>
+                      )}
+
+                      {filtro === 'mensal' && (
+                        <div className="historico-card-actions">
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(h)}>
+                            <Pencil size={15} />
+                            {t('edit')}
+                          </button>
+                          <button type="button" className="btn btn-secondary btn-sm btn-soft-danger" onClick={() => setConfirmDelete(h)}>
+                            <Trash2 size={15} />
+                            {t('delete')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )
       ) : historicoGastosFiltrado.length === 0 ? (
         <div className="card empty-state">
           <History size={32} />
-          <p>Nenhum mês no histórico de gastos.</p>
-          <p className="stat-sub">Os meses são salvos automaticamente.</p>
+          <p>{t('noExpensesHistory')}</p>
+          <p className="stat-sub">{t('monthsSavedAutomatically')}</p>
         </div>
       ) : (
         <div className="historico-list">
-          {historicoGastosFiltrado.map((h) => (
-            <div className="card stat-card" key={h.mes}>
-              <div className="historico-head">
-                <span className="stat-label">
-                  {filtro === 'mensal' ? formatMonthBR(h.mes) : `${h.mes}`}
-                </span>
-                <span className="stat-value text-danger">{formatCurrency(h.total)}</span>
-              </div>
+          {historicoGastosFiltrado.map((h) => {
+            const expanded = expandedId === h.mes
+            return (
+              <div className="card historico-card compact" key={h.mes}>
+                <div className="historico-card-main">
+                  <div>
+                    <span>{filtro === 'mensal' ? formatMonthBR(h.mes) : `${h.mes}`}</span>
+                    <strong className="text-danger">{formatCurrency(h.total)}</strong>
+                  </div>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setExpandedId(expanded ? null : h.mes)}>
+                    {expanded ? t('hide') : t('details')}
+                  </button>
+                </div>
 
-              <div className="breakdown">
-                <div className="breakdown-row">
-                  <div className="breakdown-head">
-                    <span><span className="badge">Gastos</span></span>
-                    <strong>{formatCurrency(h.total_gastos)}</strong>
+                {expanded && (
+                  <div className="historico-card-details">
+                    <div className="breakdown compact">
+                      {[
+                        { label: t('expenses'), total: h.total_gastos, color: '#ef4444' },
+                        { label: t('maintenance'), total: h.total_manutencoes, color: '#f97316' },
+                        { label: t('fixedExpenses'), total: h.total_fixas, color: '#8b5cf6' },
+                      ].map((item) => (
+                        <div className="breakdown-row" key={item.label}>
+                          <div className="breakdown-head">
+                            <span><span className="badge">{item.label}</span></span>
+                            <strong>{formatCurrency(item.total)}</strong>
+                          </div>
+                          <div className="progress">
+                            <div
+                              className="progress-bar"
+                              style={{
+                                width: `${h.total > 0 ? Math.round((item.total / h.total) * 100) : 0}%`,
+                                background: item.color,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="progress">
-                    <div
-                      className="progress-bar"
-                      style={{
-                        width: `${h.total > 0 ? Math.round((h.total_gastos / h.total) * 100) : 0}%`,
-                        background: '#ef4444',
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="breakdown-row">
-                  <div className="breakdown-head">
-                    <span><span className="badge">Manutenções</span></span>
-                    <strong>{formatCurrency(h.total_manutencoes)}</strong>
-                  </div>
-                  <div className="progress">
-                    <div
-                      className="progress-bar"
-                      style={{
-                        width: `${h.total > 0 ? Math.round((h.total_manutencoes / h.total) * 100) : 0}%`,
-                        background: '#f97316',
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="breakdown-row">
-                  <div className="breakdown-head">
-                    <span><span className="badge">Despesas fixas</span></span>
-                    <strong>{formatCurrency(h.total_fixas)}</strong>
-                  </div>
-                  <div className="progress">
-                    <div
-                      className="progress-bar"
-                      style={{
-                        width: `${h.total > 0 ? Math.round((h.total_fixas / h.total) * 100) : 0}%`,
-                        background: '#8b5cf6',
-                      }}
-                    />
-                  </div>
-                </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       <Modal
         open={modalOpen}
-        title={editing ? 'Editar entrada' : 'Nova entrada'}
+        title={editing ? t('editEntry') : t('newEntry')}
         onClose={() => setModalOpen(false)}
       >
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="label" htmlFor="hist-mes">Mês</label>
+            <label className="label" htmlFor="hist-mes">{t('month')}</label>
             <MonthPicker value={form.mes} onChange={(mes) => setForm({ ...form, mes })} />
           </div>
 
@@ -437,7 +433,7 @@ export default function Historico() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="label" htmlFor="hist-corridas">Corridas</label>
+              <label className="label" htmlFor="hist-corridas">{t('rides')}</label>
               <input
                 id="hist-corridas"
                 className="input"
@@ -450,7 +446,7 @@ export default function Historico() {
               />
             </div>
             <div className="form-group">
-              <label className="label" htmlFor="hist-horas">Horas</label>
+              <label className="label" htmlFor="hist-horas">{t('hours')}</label>
               <input
                 id="hist-horas"
                 className="input"
@@ -465,15 +461,15 @@ export default function Historico() {
           </div>
 
           <div className="alert alert-info">
-            Total do mês: <strong>{formatCurrency(totalForm)}</strong>
+            {t('totalMonth')}: <strong>{formatCurrency(totalForm)}</strong>
           </div>
 
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
-              Cancelar
+              {t('cancel')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? t('saving') : t('save')}
             </button>
           </div>
         </form>
@@ -481,7 +477,7 @@ export default function Historico() {
 
       <Modal
         open={confirmDelete !== null}
-        title="Excluir entrada"
+        title={t('deleteEntry')}
         onClose={() => setConfirmDelete(null)}
       >
         <p className="modal-text">
@@ -491,10 +487,10 @@ export default function Historico() {
         </p>
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
-            Cancelar
+            {t('cancel')}
           </button>
           <button type="button" className="btn btn-danger" onClick={handleDelete}>
-            Excluir
+            {t('delete')}
           </button>
         </div>
       </Modal>

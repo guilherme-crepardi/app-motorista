@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, CalendarRange } from 'lucide-react'
+import { CalendarRange, ChevronLeft, ChevronRight, Gauge, Wallet } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { PLATAFORMAS, plataformaColor } from '../lib/constants'
 import { formatCurrency, formatMonthBR, lastDayOfMonthISO, toISODate, currentMonthISO, sum } from '../lib/utils'
 import type { Ganho, Gasto } from '../types'
-import { useDespesasFixas, totalFixo, fixoDiario } from '../lib/despesasFixas'
+import { useDespesasFixas, totalFixo } from '../lib/despesasFixas'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function Mes() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const fixas = useDespesasFixas()
   const [month, setMonth] = useState(currentMonthISO())
   const [ganhos, setGanhos] = useState<Ganho[]>([])
@@ -68,33 +70,17 @@ export default function Mes() {
     [ganhos, totalGanhos],
   )
 
-  const semanas = useMemo(() => {
-    const buckets: { start: number; end: number; ganhos: number; gastos: number }[] = []
-    for (let day = 1; day <= daysInMonth; day += 7) {
-      const end = Math.min(day + 6, daysInMonth)
-      let g = 0
-      let despesa = 0
-      for (let d = day; d <= end; d++) {
-        const iso = `${month}-${String(d).padStart(2, '0')}`
-        g += sum(ganhos.filter((x) => x.data === iso).map((x) => Number(x.valor)))
-        despesa += sum(gastos.filter((x) => x.data === iso).map((x) => Number(x.valor))) + fixoDiario(fixas)
-      }
-      buckets.push({ start: day, end, ganhos: g, gastos: despesa })
-    }
-    return buckets
-  }, [month, daysInMonth, ganhos, gastos, fixas])
-
   const mediaDia = totalGanhos / daysInMonth
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Mês</h1>
+          <h1>{t('month')}</h1>
           <p className="page-subtitle">{formatMonthBR(month)}</p>
         </div>
         <div className="week-nav">
-          <button type="button" className="icon-btn week-arrow" onClick={() => shiftMonth(-1)} aria-label="Mês anterior">
+          <button type="button" className="icon-btn week-arrow" onClick={() => shiftMonth(-1)} aria-label={t('previousMonth')}>
             <ChevronLeft size={18} />
           </button>
           <button
@@ -103,9 +89,9 @@ export default function Mes() {
             onClick={() => setMonth(currentMonthISO())}
             disabled={isCurrentMonth}
           >
-            Mês atual
+            {t('currentMonth')}
           </button>
-          <button type="button" className="icon-btn week-arrow" onClick={() => shiftMonth(1)} aria-label="Próximo mês">
+          <button type="button" className="icon-btn week-arrow" onClick={() => shiftMonth(1)} aria-label={t('nextMonth')}>
             <ChevronRight size={18} />
           </button>
         </div>
@@ -113,52 +99,57 @@ export default function Mes() {
 
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
-        <div className="page-loading">Carregando...</div>
+        <div className="page-loading">{t('loading')}</div>
       ) : (
         <>
-          <section className="stats-grid">
-            <div className="card stat-card stat-positive">
-              <div className="stat-icon">
-                <TrendingUp size={20} />
-              </div>
+          <section className="card mes-hero">
+            <div>
+              <span className="dashboard-eyebrow">{t('monthBalance')}</span>
+              <strong className={saldo < 0 ? 'text-danger' : 'text-success'}>{formatCurrency(saldo)}</strong>
+            </div>
+            <div className="mes-hero-grid">
+              <span>
+                <small>{t('earnings')}</small>
+                <strong className="text-success">{formatCurrency(totalGanhos)}</strong>
+              </span>
+              <span>
+                <small>{t('expenses')}</small>
+                <strong className="text-danger">{formatCurrency(totalGastos)}</strong>
+              </span>
+            </div>
+          </section>
+
+          <section className="dashboard-quick-grid">
+            <div className="card dashboard-mini-card">
+              <CalendarRange size={18} />
               <div>
-                <p className="stat-label">Ganhos do mês</p>
-                <p className="stat-value">{formatCurrency(totalGanhos)}</p>
+                <span>{t('dailyAverage')}</span>
+                <strong>{formatCurrency(mediaDia)}</strong>
+                <small>{daysInMonth} {t('daysInMonth')}</small>
               </div>
             </div>
-            <div className="card stat-card stat-negative">
-              <div className="stat-icon">
-                <TrendingDown size={20} />
-              </div>
+            <div className="card dashboard-mini-card">
+              <Wallet size={18} />
               <div>
-                <p className="stat-label">Gastos do mês</p>
-                <p className="stat-value">{formatCurrency(totalGastos)}</p>
+                <span>{t('entries')}</span>
+                <strong>{ganhos.length}</strong>
+                <small>{t('registeredEarnings')}</small>
               </div>
             </div>
-            <div className="card stat-card">
-              <div className="stat-icon">
-                <Wallet size={20} />
-              </div>
+            <div className="card dashboard-mini-card">
+              <Gauge size={18} />
               <div>
-                <p className="stat-label">Saldo do mês</p>
-                <p className={`stat-value ${saldo < 0 ? 'text-danger' : 'text-success'}`}>{formatCurrency(saldo)}</p>
-              </div>
-            </div>
-            <div className="card stat-card">
-              <div className="stat-icon">
-                <CalendarRange size={20} />
-              </div>
-              <div>
-                <p className="stat-label">Média por dia</p>
-                <p className="stat-value">{formatCurrency(mediaDia)}</p>
+                <span>{t('result')}</span>
+                <strong className={saldo < 0 ? 'text-danger' : 'text-success'}>{saldo < 0 ? t('negative') : t('positive')}</strong>
+                <small>{formatCurrency(Math.abs(saldo))}</small>
               </div>
             </div>
           </section>
 
-          <section className="charts-grid">
-            <div className="card chart-card">
-              <h2 className="section-title">Ganhos por plataforma</h2>
-              <div className="breakdown">
+          <section className="semana-layout single">
+            <div className="card chart-card semana-card">
+              <h2 className="section-title">{t('earningsByPlatform')}</h2>
+              <div className="breakdown compact">
                 {porPlataforma.map(({ value, label, total, percent }) => (
                   <div className="breakdown-row" key={value}>
                     <div className="breakdown-head">
@@ -174,33 +165,6 @@ export default function Mes() {
                       <div
                         className="progress-bar"
                         style={{ width: `${percent}%`, background: plataformaColor(value) }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card chart-card">
-              <h2 className="section-title">Semanas do mês</h2>
-              <div className="breakdown">
-                {semanas.map((s, i) => (
-                  <div className="breakdown-row" key={`${s.start}-${s.end}`}>
-                    <div className="breakdown-head">
-                      <span>
-                        Semana {i + 1} <span className="breakdown-pct">{s.start} a {s.end}</span>
-                      </span>
-                      <span>
-                        <strong>{formatCurrency(s.ganhos)}</strong>
-                        {s.gastos > 0 && <span className="breakdown-pct text-danger"> · -{formatCurrency(s.gastos)}</span>}
-                      </span>
-                    </div>
-                    <div className="progress">
-                      <div
-                        className="progress-bar"
-                        style={{
-                          width: `${totalGanhos > 0 ? Math.min(100, Math.round((s.ganhos / totalGanhos) * 100)) : 0}%`,
-                        }}
                       />
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, CalendarDays } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Wallet } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { PLATAFORMAS, plataformaColor } from '../lib/constants'
@@ -15,16 +15,17 @@ import {
 } from '../lib/utils'
 import type { Ganho, Gasto } from '../types'
 import { useDespesasFixas, totalFixo, fixoDiario } from '../lib/despesasFixas'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function Semana() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const fixas = useDespesasFixas()
   const [weekDay, setWeekDay] = useState(todayISO())
   const [ganhos, setGanhos] = useState<Ganho[]>([])
   const [gastos, setGastos] = useState<Gasto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [savingDia, setSavingDia] = useState<string | null>(null)
 
   const weekStart = useMemo(() => startOfWeek(isoToDate(weekDay)), [weekDay])
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart])
@@ -104,31 +105,17 @@ export default function Semana() {
   const totalHoras = sum(dias.map((dia) => dia.horas))
   const ganhoPorHora = totalHoras > 0 ? totalGanhos / totalHoras : 0
 
-  async function setDiaHoras(iso: string, horas: number) {
-    if (!user) return
-    const ids = ganhos.filter((g) => g.data === iso).map((g) => g.id)
-    if (ids.length === 0) return
-    setSavingDia(iso)
-    const { error: err } = await supabase
-      .from('ganhos')
-      .update({ horas_trabalhadas: horas || null })
-      .in('id', ids)
-    if (err) setError(err.message)
-    setSavingDia(null)
-    load()
-  }
-
-  const weekRangeLabel = `Semana de ${formatDateBR(fromISO)} a ${formatDateBR(toISO)}`
+  const weekRangeLabel = `${t('weekRange')} ${formatDateBR(fromISO)} ${t('to')} ${formatDateBR(toISO)}`
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Semana</h1>
+          <h1>{t('week')}</h1>
           <p className="page-subtitle">{weekRangeLabel}</p>
         </div>
         <div className="week-nav">
-          <button type="button" className="icon-btn week-arrow" onClick={() => shiftWeek(-7)} aria-label="Semana anterior">
+          <button type="button" className="icon-btn week-arrow" onClick={() => shiftWeek(-7)} aria-label={t('previousWeek')}>
             <ChevronLeft size={18} />
           </button>
           <button
@@ -137,9 +124,9 @@ export default function Semana() {
             onClick={() => setWeekDay(todayISO())}
             disabled={isCurrentWeek}
           >
-            Semana atual
+            {t('currentWeek')}
           </button>
-          <button type="button" className="icon-btn week-arrow" onClick={() => shiftWeek(7)} aria-label="Próxima semana">
+          <button type="button" className="icon-btn week-arrow" onClick={() => shiftWeek(7)} aria-label={t('nextWeek')}>
             <ChevronRight size={18} />
           </button>
         </div>
@@ -147,55 +134,57 @@ export default function Semana() {
 
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
-        <div className="page-loading">Carregando...</div>
+        <div className="page-loading">{t('loading')}</div>
       ) : (
         <>
-          <section className="stats-grid">
-            <div className="card stat-card stat-positive">
-              <div className="stat-icon">
-                <TrendingUp size={20} />
-              </div>
+          <section className="card semana-hero">
+            <div>
+              <span className="dashboard-eyebrow">{t('weekBalance')}</span>
+              <strong className={saldo < 0 ? 'text-danger' : 'text-success'}>{formatCurrency(saldo)}</strong>
+            </div>
+            <div className="semana-hero-grid">
+              <span>
+                <small>{t('earnings')}</small>
+                <strong className="text-success">{formatCurrency(totalGanhos)}</strong>
+              </span>
+              <span>
+                <small>{t('expenses')}</small>
+                <strong className="text-danger">{formatCurrency(totalGastos)}</strong>
+              </span>
+            </div>
+          </section>
+
+          <section className="dashboard-quick-grid">
+            <div className="card dashboard-mini-card">
+              <CalendarDays size={18} />
               <div>
-                <p className="stat-label">Ganhos da semana</p>
-                <p className="stat-value">{formatCurrency(totalGanhos)}</p>
+                <span>{t('workedDays')}</span>
+                <strong>{diasTrabalhados}</strong>
+                <small>{t('of7Days')}</small>
               </div>
             </div>
-            <div className="card stat-card stat-negative">
-              <div className="stat-icon">
-                <TrendingDown size={20} />
-              </div>
+            <div className="card dashboard-mini-card">
+              <Wallet size={18} />
               <div>
-                <p className="stat-label">Gastos da semana</p>
-                <p className="stat-value">{formatCurrency(totalGastos)}</p>
+                <span>{t('dailyAverage')}</span>
+                <strong>{formatCurrency(mediaDia)}</strong>
+                <small>{t('daysWithEarnings')}</small>
               </div>
             </div>
-            <div className="card stat-card">
-              <div className="stat-icon">
-                <Wallet size={20} />
-              </div>
+            <div className="card dashboard-mini-card">
+              <Clock size={18} />
               <div>
-                <p className="stat-label">Saldo da semana</p>
-                <p className={`stat-value ${saldo < 0 ? 'text-danger' : 'text-success'}`}>{formatCurrency(saldo)}</p>
-              </div>
-            </div>
-            <div className="card stat-card">
-              <div className="stat-icon">
-                <CalendarDays size={20} />
-              </div>
-              <div>
-                <p className="stat-label">Ganho por hora</p>
-                <p className="stat-value">{formatCurrency(ganhoPorHora)}</p>
-                <p className="stat-sub">
-                  Média por dia: {formatCurrency(mediaDia)} · Horas: {totalHoras}h
-                </p>
+                <span>{t('hourlyEarning')}</span>
+                <strong>{formatCurrency(ganhoPorHora)}</strong>
+                <small>{totalHoras}{t('reportedHours')}</small>
               </div>
             </div>
           </section>
 
-          <section className="charts-grid">
-            <div className="card chart-card">
-              <h2 className="section-title">Ganhos por plataforma</h2>
-              <div className="breakdown">
+          <section className="semana-layout single">
+            <div className="card chart-card semana-card">
+              <h2 className="section-title">{t('earningsByPlatform')}</h2>
+              <div className="breakdown compact">
                 {porPlataforma.map(({ value, label, total, percent }) => (
                   <div className="breakdown-row" key={value}>
                     <div className="breakdown-head">
@@ -212,56 +201,6 @@ export default function Semana() {
                         className="progress-bar"
                         style={{ width: `${percent}%`, background: plataformaColor(value) }}
                       />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="card chart-card">
-              <h2 className="section-title">Dias da semana</h2>
-              <div className="breakdown">
-                {dias.map((dia) => (
-                  <div className="breakdown-row" key={dia.iso}>
-                    <div className="breakdown-head">
-                      <span className={dia.ehHoje ? 'today-label' : ''}>
-                        {dia.diaSemana} <span className="breakdown-pct">{dia.label}</span>
-                        {dia.ehHoje && <span className="breakdown-pct"> · hoje</span>}
-                      </span>
-                      <span>
-                        <strong>{formatCurrency(dia.ganhos)}</strong>
-                        {dia.gastos > 0 && <span className="breakdown-pct text-danger"> · -{formatCurrency(dia.gastos)}</span>}
-                      </span>
-                    </div>
-                    <div className="progress">
-                      <div
-                        className="progress-bar"
-                        style={{
-                          width: `${totalGanhos > 0 ? Math.min(100, Math.round((dia.ganhos / totalGanhos) * 100)) : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="breakdown-dia">
-                      <div className="breakdown-dia-horas">
-                        <span className="breakdown-pct">Horas:</span>
-                        <select
-                          className="input horas-select"
-                          aria-label={`Horas trabalhadas ${dia.diaSemana}`}
-                          value={dia.horas === 0 ? '' : String(dia.horas)}
-                          disabled={savingDia === dia.iso || dia.ganhos === 0}
-                          onChange={(e) => setDiaHoras(dia.iso, Number(e.target.value))}
-                        >
-                          <option value="">—</option>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                            <option key={h} value={h}>
-                              {h}h
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <span className="breakdown-pct">
-                        {dia.ganhoPorHora > 0 ? `${formatCurrency(dia.ganhoPorHora)}/h` : '—'}
-                      </span>
                     </div>
                   </div>
                 ))}

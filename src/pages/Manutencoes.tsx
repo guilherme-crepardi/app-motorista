@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Plus, Pencil, Trash2, Wrench } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { MANUTENCOES_TIPOS, manutencaoTipoLabel, manutencaoTipoColor } from '../lib/constants'
@@ -7,6 +7,7 @@ import { formatCurrency, todayISO, currentMonthISO, formatDateBR, lastDayOfMonth
 import Modal from '../components/Modal'
 import MonthPicker from '../components/MonthPicker'
 import type { Manutencao, TipoManutencao } from '../types'
+import { useLanguage } from '../contexts/LanguageContext'
 
 interface FormState {
   data: string
@@ -16,7 +17,6 @@ interface FormState {
   parcelas: string
   km_total: string
   km_dia: string
-  km_semana: string
   km_mes: string
   descricao: string
 }
@@ -29,13 +29,38 @@ const emptyForm: FormState = {
   parcelas: '',
   km_total: '',
   km_dia: '',
-  km_semana: '',
   km_mes: '',
   descricao: '',
 }
 
+function formatIntegerBR(digits: string): string {
+  const clean = digits.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
+  if (!clean) return ''
+  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
+function formatValorInput(text: string): string {
+  const digits = text.replace(/\D/g, '').replace(/^0+(?=\d{3})/, '')
+  if (!digits) return ''
+  const padded = digits.padStart(3, '0')
+  const integer = formatIntegerBR(padded.slice(0, -2)) || '0'
+  const cents = padded.slice(-2)
+  return `${integer},${cents}`
+}
+
+function formatValorFromNumber(value: number): string {
+  return formatValorInput(String(Math.round(Number(value) * 100)))
+}
+
+function parseValor(text: string): number {
+  const normalized = text.replace(/\s/g, '').replace('R$', '').replace(/\./g, '').replace(',', '.')
+  const value = Number(normalized)
+  return Number.isFinite(value) ? value : 0
+}
+
 export default function Manutencoes() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [manutencoes, setManutencoes] = useState<Manutencao[]>([])
   const [anoManutencoes, setAnoManutencoes] = useState<Manutencao[]>([])
   const [loading, setLoading] = useState(true)
@@ -119,12 +144,11 @@ export default function Manutencoes() {
     setForm({
       data: m.data,
       tipo: m.tipo,
-      valor: String(m.valor),
+      valor: formatValorFromNumber(Number(m.valor)),
       parcelado: m.parcelado,
       parcelas: m.parcelas != null ? String(m.parcelas) : '',
       km_total: m.km_total != null ? String(m.km_total) : '',
       km_dia: m.km_dia != null ? String(m.km_dia) : '',
-      km_semana: m.km_semana != null ? String(m.km_semana) : '',
       km_mes: m.km_mes != null ? String(m.km_mes) : '',
       descricao: m.descricao ?? '',
     })
@@ -141,12 +165,12 @@ export default function Manutencoes() {
       user_id: user.id,
       data: form.data,
       tipo: form.tipo,
-      valor: Number(form.valor),
+      valor: parseValor(form.valor),
       parcelado: form.parcelado,
       parcelas: form.parcelado && form.parcelas ? Number(form.parcelas) : null,
       km_total: form.km_total ? Number(form.km_total) : null,
       km_dia: form.km_dia ? Number(form.km_dia) : null,
-      km_semana: form.km_semana ? Number(form.km_semana) : null,
+      km_semana: null,
       km_mes: form.km_mes ? Number(form.km_mes) : null,
       descricao: form.descricao.trim() || null,
     }
@@ -173,37 +197,48 @@ export default function Manutencoes() {
   }
 
   function parcelamentoInfo(m: Manutencao): string {
-    if (!m.parcelado || !m.parcelas) return 'À vista'
+    if (!m.parcelado || !m.parcelas) return t('cash')
     const parcela = Number(m.valor) / m.parcelas
     return `${m.parcelas}x de ${formatCurrency(parcela)}`
+  }
+
+  function manutencaoTitulo(m: Manutencao): string {
+    if (m.tipo === 'outro' && m.descricao) return m.descricao
+    return manutencaoTipoLabel(m.tipo)
   }
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Manutenções</h1>
-          <p className="page-subtitle">Registre as manutenções do carro: pneus, óleo, bateria, limpeza e mais</p>
+          <h1>{t('maintenance')}</h1>
+          <p className="page-subtitle">{t('maintenanceSubtitle')}</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={openNew}>
+        <button type="button" className="btn btn-primary btn-large" onClick={openNew}>
           <Plus size={18} />
-          Nova manutenção
+          {t('registerMaintenance')}
         </button>
       </header>
 
       <div className="manut-layout">
         <div className="manut-main">
-          <div className="card toolbar">
-            <div className="toolbar-filters">
+          <section className="card manut-total-card">
+            <span>{t('periodTotal')}</span>
+            <strong className="text-danger">{formatCurrency(total)}</strong>
+            <small>{filtered.length} manutenção(ões)</small>
+          </section>
+
+          <div className="card toolbar manut-toolbar">
+            <div className="manut-filter-row">
               <div className="form-group">
                 <label className="label" htmlFor="month">
-                  Período
+                  {t('period')}
                 </label>
                 <MonthPicker value={month} onChange={setMonth} />
               </div>
               <div className="form-group">
                 <label className="label" htmlFor="tipo-filter">
-                  Tipo
+                  {t('type')}
                 </label>
                 <select
                   id="tipo-filter"
@@ -211,7 +246,7 @@ export default function Manutencoes() {
                   value={tipoFilter}
                   onChange={(e) => setTipoFilter(e.target.value as 'todos' | TipoManutencao)}
                 >
-                  <option value="todos">Todos</option>
+                  <option value="todos">{t('allPlural')}</option>
                   {MANUTENCOES_TIPOS.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
@@ -220,93 +255,51 @@ export default function Manutencoes() {
                 </select>
               </div>
             </div>
-            <div className="toolbar-total">
-              <span>Total do período</span>
-              <strong>{formatCurrency(total)}</strong>
-              <span className="toolbar-label">{filtered.length} manutenção(ões)</span>
-            </div>
           </div>
 
           {error && <div className="alert alert-error">{error}</div>}
 
           {loading ? (
-            <div className="page-loading">Carregando...</div>
-          ) : filtered.length === 0 ? (
-            <div className="card empty-state">
-              <Wrench size={32} />
-              <p>Nenhuma manutenção registrada neste período.</p>
-              <button type="button" className="btn btn-secondary" onClick={openNew}>
-                <Plus size={16} />
-                Registrar manutenção
-              </button>
-            </div>
-          ) : (
-            <div className="card table-card">
-              <div className="table-wrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Data</th>
-                      <th>Tipo</th>
-                      <th>Descrição</th>
-                      <th>Pagamento</th>
-                      <th className="align-right">Km</th>
-                      <th className="align-right">Valor</th>
-                      <th className="align-right">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((m) => (
-                      <tr key={m.id}>
-                        <td>{formatDateBR(m.data)}</td>
-                        <td>
-                          <span className="badge" style={{ color: manutencaoTipoColor(m.tipo) }}>
-                            {manutencaoTipoLabel(m.tipo)}
-                          </span>
-                        </td>
-                        <td className="cell-muted">{m.descricao || '—'}</td>
-                        <td className="cell-muted">{parcelamentoInfo(m)}</td>
-                        <td className="align-right cell-muted">{m.km_total != null ? `${m.km_total} km` : '—'}</td>
-                        <td className="align-right text-danger">{formatCurrency(Number(m.valor))}</td>
-                        <td className="align-right">
-                          <div className="row-actions">
-                            <button type="button" className="icon-btn" onClick={() => openEdit(m)} aria-label="Editar">
-                              <Pencil size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              className="icon-btn danger"
-                              onClick={() => setConfirmDelete(m)}
-                              aria-label="Excluir"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={5}>Total</td>
-                      <td className="align-right text-danger">{formatCurrency(total)}</td>
-                      <td />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
+            <div className="page-loading">{t('loading')}</div>
+          ) : filtered.length > 0 ? (
+            <section className="manut-list" aria-label={t('maintenance')}>
+              {filtered.map((m) => (
+                <article className="card manut-card" key={m.id}>
+                  <div className="manut-card-main">
+                    <div>
+                      <span className="badge" style={{ color: manutencaoTipoColor(m.tipo) }}>
+                        {manutencaoTitulo(m)}
+                      </span>
+                      <strong>{formatCurrency(Number(m.valor))}</strong>
+                      <small>{formatDateBR(m.data)} · {parcelamentoInfo(m)}</small>
+                      {m.km_total != null && <small>{m.km_total} km do carro</small>}
+                      {m.tipo !== 'outro' && m.descricao && <p>{m.descricao}</p>}
+                    </div>
+                    <div className="manut-card-actions">
+                      <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEdit(m)}>
+                        <Pencil size={15} />
+                        {t('edit')}
+                      </button>
+                      <button type="button" className="btn btn-secondary btn-sm btn-soft-danger" onClick={() => setConfirmDelete(m)}>
+                        <Trash2 size={15} />
+                        {t('delete')}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </section>
+          ) : null}
         </div>
 
         <aside className="card manut-historico">
-          <h2 className="section-title">Histórico do ano</h2>
+          <h2 className="section-title">{t('yearHistory')}</h2>
           {porMes.length === 0 ? (
-            <p className="empty-state small">Nenhuma manutenção registrada em {yearLabel}.</p>
+            <p className="empty-state small">{t('noMaintenanceYear').replace('{year}', yearLabel)}</p>
           ) : (
             <>
               <p className="historico-ano-total">
-                Total em {yearLabel}: <strong>{formatCurrency(totalAno)}</strong>
+                {t('totalInYear').replace('{year}', yearLabel)} <strong>{formatCurrency(totalAno)}</strong>
               </p>
               {porMes.map(({ key, total: totalMes, count, items }) => (
                 <div className="hist-mes" key={key}>
@@ -319,17 +312,17 @@ export default function Manutencoes() {
                   {items.map((m) => (
                     <div className="hist-item" key={m.id}>
                       <span className="badge" style={{ color: manutencaoTipoColor(m.tipo) }}>
-                        {manutencaoTipoLabel(m.tipo)}
+                        {manutencaoTitulo(m)}
                       </span>
                       <span className="hist-item-info">
-                        <span>{m.descricao || formatDateBR(m.data)}</span>
+                        <span>{manutencaoTitulo(m)}</span>
                         <span className="hist-item-date">{formatDateBR(m.data)}</span>
                       </span>
                       <strong>{formatCurrency(Number(m.valor))}</strong>
                     </div>
                   ))}
                   {count > items.length && (
-                    <p className="hist-mais">+{count - items.length} mais neste mês</p>
+                    <p className="hist-mais">+{count - items.length} {t('moreThisMonth')}</p>
                   )}
                 </div>
               ))}
@@ -340,14 +333,14 @@ export default function Manutencoes() {
 
       <Modal
         open={modalOpen}
-        title={editing ? 'Editar manutenção' : 'Nova manutenção'}
+        title={editing ? t('editMaintenance') : t('newMaintenance')}
         onClose={() => setModalOpen(false)}
       >
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <div className="form-group">
               <label className="label" htmlFor="manut-data">
-                Data
+                {t('date')}
               </label>
               <input
                 id="manut-data"
@@ -360,7 +353,7 @@ export default function Manutencoes() {
             </div>
             <div className="form-group">
               <label className="label" htmlFor="manut-tipo">
-                Tipo
+                {t('type')}
               </label>
               <select
                 id="manut-tipo"
@@ -370,33 +363,49 @@ export default function Manutencoes() {
               >
                 {MANUTENCOES_TIPOS.map((t) => (
                   <option key={t.value} value={t.value}>
-                    {t.label}
+                    {t.value === 'outro' ? 'Outro (escrever)' : t.label}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
+          {form.tipo === 'outro' && (
+            <div className="form-group">
+              <label className="label" htmlFor="manut-tipo-custom">
+                {t('writeMaintenanceType')}
+              </label>
+              <input
+                id="manut-tipo-custom"
+                className="input"
+                type="text"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                placeholder="Ex.: Freio, suspensão, correia..."
+                required
+              />
+            </div>
+          )}
+
           <div className="form-row">
             <div className="form-group">
               <label className="label" htmlFor="manut-valor">
-                Valor (R$)
+                {t('receivedValue')}
               </label>
               <input
                 id="manut-valor"
                 className="input"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 required
                 value={form.valor}
-                onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                onChange={(e) => setForm({ ...form, valor: formatValorInput(e.target.value) })}
                 placeholder="0,00"
               />
             </div>
             <div className="form-group">
               <label className="label" htmlFor="manut-km-total">
-                Km total do carro
+                {t('carTotalKm')}
               </label>
               <input
                 id="manut-km-total"
@@ -406,7 +415,7 @@ export default function Manutencoes() {
                 min="0"
                 value={form.km_total}
                 onChange={(e) => setForm({ ...form, km_total: e.target.value })}
-                placeholder="Opcional"
+                placeholder={t('optional')}
               />
             </div>
           </div>
@@ -414,7 +423,7 @@ export default function Manutencoes() {
           <div className="form-row">
             <div className="form-group">
               <label className="label" htmlFor="manut-km-dia">
-                Km do dia
+                {t('dayKm')}
               </label>
               <input
                 id="manut-km-dia"
@@ -424,27 +433,12 @@ export default function Manutencoes() {
                 min="0"
                 value={form.km_dia}
                 onChange={(e) => setForm({ ...form, km_dia: e.target.value })}
-                placeholder="Opcional"
-              />
-            </div>
-            <div className="form-group">
-              <label className="label" htmlFor="manut-km-semana">
-                Km da semana
-              </label>
-              <input
-                id="manut-km-semana"
-                className="input"
-                type="number"
-                step="1"
-                min="0"
-                value={form.km_semana}
-                onChange={(e) => setForm({ ...form, km_semana: e.target.value })}
-                placeholder="Opcional"
+                placeholder={t('optional')}
               />
             </div>
             <div className="form-group">
               <label className="label" htmlFor="manut-km-mes">
-                Km do mês
+                {t('monthKm')}
               </label>
               <input
                 id="manut-km-mes"
@@ -454,7 +448,7 @@ export default function Manutencoes() {
                 min="0"
                 value={form.km_mes}
                 onChange={(e) => setForm({ ...form, km_mes: e.target.value })}
-                placeholder="Opcional"
+                placeholder={t('optional')}
               />
             </div>
           </div>
@@ -466,14 +460,14 @@ export default function Manutencoes() {
                 checked={form.parcelado}
                 onChange={(e) => setForm({ ...form, parcelado: e.target.checked })}
               />
-              Foi parcelado
+              {t('paidInInstallments')}
             </label>
           </div>
 
           {form.parcelado && (
             <div className="form-group">
               <label className="label" htmlFor="manut-parcelas">
-                Em quantas vezes
+                {t('installmentsCount')}
               </label>
               <input
                 id="manut-parcelas"
@@ -489,26 +483,28 @@ export default function Manutencoes() {
             </div>
           )}
 
-          <div className="form-group">
-            <label className="label" htmlFor="manut-descricao">
-              Descrição
-            </label>
-            <input
-              id="manut-descricao"
-              className="input"
-              type="text"
-              value={form.descricao}
-              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-              placeholder="Ex.: troca dos 4 pneus, óleo sintético..."
-            />
-          </div>
+          {form.tipo !== 'outro' && (
+            <div className="form-group">
+              <label className="label" htmlFor="manut-descricao">
+                {t('description')}
+              </label>
+              <input
+                id="manut-descricao"
+                className="input"
+                type="text"
+                value={form.descricao}
+                onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+                placeholder="Ex.: troca dos 4 pneus, óleo sintético..."
+              />
+            </div>
+          )}
 
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
-              Cancelar
+              {t('cancel')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? t('saving') : t('save')}
             </button>
           </div>
         </form>
@@ -516,20 +512,20 @@ export default function Manutencoes() {
 
       <Modal
         open={confirmDelete !== null}
-        title="Excluir manutenção"
+        title={t('deleteMaintenance')}
         onClose={() => setConfirmDelete(null)}
       >
         <p className="modal-text">
           Tem certeza que deseja excluir a manutenção de{' '}
-          {confirmDelete ? manutencaoTipoLabel(confirmDelete.tipo) : ''} no valor de{' '}
+          {confirmDelete ? manutencaoTitulo(confirmDelete) : ''} no valor de{' '}
           {confirmDelete ? formatCurrency(Number(confirmDelete.valor)) : ''}?
         </p>
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={() => setConfirmDelete(null)}>
-            Cancelar
+            {t('cancel')}
           </button>
           <button type="button" className="btn btn-danger" onClick={handleDelete}>
-            Excluir
+            {t('delete')}
           </button>
         </div>
       </Modal>

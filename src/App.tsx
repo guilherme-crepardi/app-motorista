@@ -11,14 +11,17 @@ import DespesasFixas from './pages/DespesasFixas'
 import Manutencoes from './pages/Manutencoes'
 import Metas from './pages/Metas'
 import Historico from './pages/Historico'
+import Privacidade from './pages/Privacidade'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/privacidade" element={<Privacidade />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Navigate to="/ganhos" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/semana" element={<Semana />} />
           <Route path="/mes" element={<Mes />} />
           <Route path="/ganhos" element={<Ganhos />} />
@@ -29,7 +32,7 @@ export default function App() {
           <Route path="/historico" element={<Historico />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to="/ganhos" replace />} />
     </Routes>
   )
 }

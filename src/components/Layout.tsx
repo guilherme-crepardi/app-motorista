@@ -1,29 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Wallet, Receipt, Target, LogOut, Car, Sun, Moon, CalendarDays, CalendarRange, Wrench, Repeat, Menu, X, History } from 'lucide-react'
+import { LayoutDashboard, Wallet, Receipt, Target, LogOut, Car, Sun, Moon, CalendarDays, CalendarRange, Wrench, Repeat, Menu, X, History, Globe2, ShieldCheck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { applyTheme, getInitialTheme, type Theme } from '../lib/theme'
 import { useAuth } from '../contexts/AuthContext'
 import { syncHistorico } from '../lib/historico'
 import { syncHistoricoGastos } from '../lib/historicoGastos'
 import { fetchTema, salvarTema } from '../lib/preferencias'
+import { useLanguage, type Language } from '../contexts/LanguageContext'
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/semana', label: 'Semana', icon: CalendarDays },
-  { to: '/mes', label: 'Mês', icon: CalendarRange },
-  { to: '/ganhos', label: 'Ganhos', icon: Wallet },
-  { to: '/gastos', label: 'Gastos', icon: Receipt },
-  { to: '/despesas-fixas', label: 'Despesas Fixas', icon: Repeat },
-  { to: '/manutencoes', label: 'Manutenções', icon: Wrench },
-  { to: '/metas', label: 'Metas', icon: Target },
-  { to: '/historico', label: 'Histórico', icon: History },
+  { to: '/dashboard', labelKey: 'dashboard', icon: LayoutDashboard },
+  { to: '/metas', labelKey: 'goals', icon: Target },
+  { to: '/ganhos', labelKey: 'earnings', icon: Wallet },
+  { to: '/gastos', labelKey: 'expenses', icon: Receipt },
+  { to: '/despesas-fixas', labelKey: 'fixedExpenses', icon: Repeat },
+  { to: '/semana', labelKey: 'week', icon: CalendarDays },
+  { to: '/mes', labelKey: 'month', icon: CalendarRange },
+  { to: '/manutencoes', labelKey: 'maintenance', icon: Wrench },
+  { to: '/historico', labelKey: 'history', icon: History },
 ]
 
 export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user } = useAuth()
+  const { language, setLanguage, t } = useLanguage()
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
   const [menuOpen, setMenuOpen] = useState(false)
   const userTouchedTheme = useRef(false)
@@ -63,7 +65,7 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <header className="mobile-topbar">
-        <button type="button" className="menu-btn" onClick={() => setMenuOpen(true)} aria-label="Abrir menu">
+        <button type="button" className="menu-btn" onClick={() => setMenuOpen(true)} aria-label={t('openMenu')}>
           <Menu size={24} />
         </button>
         <div className="brand">
@@ -71,8 +73,8 @@ export default function Layout() {
             <Car size={20} />
           </span>
           <div className="brand-text">
-            <strong>Planejamento</strong>
-            <span>Motorista</span>
+            <strong>{t('appShort')}</strong>
+            <span>{t('driver')}</span>
           </div>
         </div>
       </header>
@@ -86,16 +88,16 @@ export default function Layout() {
               <Car size={20} />
             </span>
             <div className="brand-text">
-              <strong>Planejamento</strong>
-              <span>Motorista</span>
+              <strong>{t('appShort')}</strong>
+              <span>{t('driver')}</span>
             </div>
           </div>
-          <button type="button" className="menu-btn menu-btn-close" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
+          <button type="button" className="menu-btn menu-btn-close" onClick={() => setMenuOpen(false)} aria-label={t('closeMenu')}>
             <X size={22} />
           </button>
         </div>
         <nav className="nav">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {navItems.map(({ to, labelKey, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -104,19 +106,32 @@ export default function Layout() {
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
               <Icon size={18} />
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-footer">
-          <button type="button" className="btn btn-ghost btn-logout" onClick={toggleTheme} aria-label="Alternar tema">
+          <label className="sidebar-language">
+            <Globe2 size={18} />
+            <span>{t('language')}</span>
+            <select value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
+              <option value="pt">PT</option>
+              <option value="en">EN</option>
+              <option value="es">ES</option>
+            </select>
+          </label>
+          <button type="button" className="btn btn-ghost btn-logout" onClick={toggleTheme} aria-label={t('toggleTheme')}>
             {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-            <span>{theme === 'light' ? 'Escuro' : 'Claro'}</span>
+            <span>{theme === 'light' ? t('dark') : t('light')}</span>
           </button>
           <button type="button" className="btn btn-ghost btn-logout" onClick={handleLogout}>
             <LogOut size={18} />
-            <span>Sair</span>
+            <span>{t('logout')}</span>
           </button>
+          <NavLink to="/privacidade" className="btn btn-ghost btn-logout">
+            <ShieldCheck size={18} />
+            <span>Privacidade</span>
+          </NavLink>
         </div>
       </aside>
       <main className="content">

@@ -12,7 +12,7 @@ import {
   Cell,
   Legend,
 } from 'recharts'
-import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react'
+import { CalendarDays, Gauge, Wallet } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { CATEGORIAS } from '../lib/constants'
@@ -29,9 +29,11 @@ import {
 } from '../lib/utils'
 import type { Ganho, Gasto, Manutencao, Meta, TipoMeta } from '../types'
 import { useDespesasFixas, totalFixoPorCategoria, totalFixo, fixoDiario } from '../lib/despesasFixas'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const fixas = useDespesasFixas()
   const [ganhos, setGanhos] = useState<Ganho[]>([])
   const [gastos, setGastos] = useState<Gasto[]>([])
@@ -125,87 +127,84 @@ export default function Dashboard() {
   const saldoMes = totals.ganhosMes - totals.gastosMes
 
   const metasCards = [
-    { tipo: 'diaria' as TipoMeta, label: 'Meta diária', valor: totals.ganhosHoje },
-    { tipo: 'semanal' as TipoMeta, label: 'Meta semanal', valor: totals.ganhosSemana },
-    { tipo: 'mensal' as TipoMeta, label: 'Meta mensal', valor: totals.ganhosMes },
+    { tipo: 'diaria' as TipoMeta, label: t('dailyGoal'), valor: totals.ganhosHoje },
+    { tipo: 'semanal' as TipoMeta, label: t('weeklyGoal'), valor: totals.ganhosSemana },
+    { tipo: 'mensal' as TipoMeta, label: t('monthlyGoal'), valor: totals.ganhosMes },
   ]
 
-  if (loading) return <div className="page-loading">Carregando...</div>
+  if (loading) return <div className="page-loading">{t('loading')}</div>
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Dashboard</h1>
+          <h1>{t('home')}</h1>
           <p className="page-subtitle">{formatLongDate(today)}</p>
         </div>
       </header>
 
-      <section className="stats-grid">
-        <div className="card stat-card stat-positive">
-          <div className="stat-icon">
-            <TrendingUp size={20} />
-          </div>
+      <section className="dashboard-hero card">
+        <div>
+          <span className="dashboard-eyebrow">{t('todayResult')}</span>
+          <strong className={saldoHoje < 0 ? 'text-danger' : 'text-success'}>{formatCurrency(saldoHoje)}</strong>
+        </div>
+        <div className="dashboard-hero-grid">
+          <span>
+            <small>{t('received')}</small>
+            <strong className="text-success">{formatCurrency(totals.ganhosHoje)}</strong>
+          </span>
+          <span>
+            <small>{t('spent')}</small>
+            <strong className="text-danger">{formatCurrency(totals.gastosHoje)}</strong>
+          </span>
+        </div>
+      </section>
+
+      <section className="dashboard-quick-grid">
+        <div className="card dashboard-mini-card">
+          <CalendarDays size={18} />
           <div>
-            <p className="stat-label">Ganhos hoje</p>
-            <p className="stat-value">{formatCurrency(totals.ganhosHoje)}</p>
+            <span>{t('week')}</span>
+            <strong>{formatCurrency(totals.ganhosSemana)}</strong>
+            <small>{t('earningsReceived')}</small>
           </div>
         </div>
-        <div className="card stat-card stat-negative">
-          <div className="stat-icon">
-            <TrendingDown size={20} />
-          </div>
+        <div className="card dashboard-mini-card">
+          <Wallet size={18} />
           <div>
-            <p className="stat-label">Gastos hoje</p>
-            <p className="stat-value">{formatCurrency(totals.gastosHoje)}</p>
-            {fixoHoje > 0 && <p className="stat-sub">inclui {formatCurrency(fixoHoje)} de despesas fixas</p>}
-          </div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-icon">
-            <Wallet size={20} />
-          </div>
-          <div>
-            <p className="stat-label">Saldo hoje</p>
-            <p className={`stat-value ${saldoHoje < 0 ? 'text-danger' : 'text-success'}`}>
-              {formatCurrency(saldoHoje)}
-            </p>
-          </div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-icon">
-            <Target size={20} />
-          </div>
-          <div>
-            <p className="stat-label">Ganhos do mês</p>
-            <p className="stat-value">{formatCurrency(totals.ganhosMes)}</p>
-            <p className="stat-sub">
-              Gastos: {formatCurrency(totals.gastosMes)} · Km: {totals.kmMes} km
-            </p>
-          </div>
-        </div>
-        <div className="card stat-card">
-          <div className="stat-icon">
-            <TrendingUp size={20} />
-          </div>
-          <div>
-            <p className="stat-label">Ganhos do ano</p>
-            <p className="stat-value">{formatCurrency(totals.ganhosAno)}</p>
-          </div>
-        </div>
-        <div className="card stat-card stat-negative">
-          <div className="stat-icon">
-            <TrendingDown size={20} />
-          </div>
-          <div>
-            <p className="stat-label">Gastos do ano</p>
-            <p className="stat-value">{formatCurrency(totals.gastosAno)}</p>
+            <span>{t('month')}</span>
+            <strong>{formatCurrency(totals.ganhosMes)}</strong>
+            <small>{totals.kmMes} {t('kmDriven')}</small>
           </div>
         </div>
       </section>
 
+      <section className="card dashboard-month-card">
+        <div className="dashboard-month-head">
+          <div>
+            <span className="dashboard-eyebrow">{t('monthSummary')}</span>
+            <strong className={saldoMes < 0 ? 'text-danger' : 'text-success'}>{formatCurrency(saldoMes)}</strong>
+          </div>
+          <Gauge size={22} />
+        </div>
+        <div className="dashboard-month-list">
+          <span>
+            <small>{t('earnings')}</small>
+            <strong>{formatCurrency(totals.ganhosMes)}</strong>
+          </span>
+          <span>
+            <small>{t('expenses')}</small>
+            <strong>{formatCurrency(totals.gastosMes)}</strong>
+          </span>
+          <span>
+            <small>{t('year')}</small>
+            <strong>{formatCurrency(totals.ganhosAno - totals.gastosAno)}</strong>
+          </span>
+        </div>
+      </section>
+
       <section className="section">
-        <h2 className="section-title">Metas</h2>
+        <h2 className="section-title">{t('goals')}</h2>
         <div className="metas-grid">
           {metasCards.map(({ tipo, label, valor }) => {
             const metaValor = metaValue(tipo)
@@ -214,11 +213,11 @@ export default function Dashboard() {
               <div className="card meta-card" key={tipo}>
                 <div className="meta-card-top">
                   <span>{label}</span>
-                  <strong>{metaValor ? formatCurrency(metaValor) : 'Sem meta definida'}</strong>
+                  <strong>{metaValor ? formatCurrency(metaValor) : t('noGoalSet')}</strong>
                 </div>
                 <div className="meta-card-value">
                   <span>{formatCurrency(valor)}</span>
-                  <span>atingidos</span>
+                  <span>{t('earned')}</span>
                 </div>
                 {progress !== null ? (
                   <>
@@ -228,10 +227,10 @@ export default function Dashboard() {
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <p className="meta-card-sub">{progress}% da meta</p>
+                    <p className="meta-card-sub">{progress}% {t('goalPercent')}</p>
                   </>
                 ) : (
-                  <p className="meta-card-sub">Defina uma meta na aba Metas</p>
+                  <p className="meta-card-sub">{t('setGoalInGoals')}</p>
                 )}
               </div>
             )
@@ -241,7 +240,7 @@ export default function Dashboard() {
 
       <section className="charts-grid">
         <div className="card chart-card">
-          <h2 className="section-title">Últimos 7 dias</h2>
+          <h2 className="section-title">{t('last7Days')}</h2>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.25)" />
@@ -261,9 +260,9 @@ export default function Dashboard() {
         </div>
 
         <div className="card chart-card">
-          <h2 className="section-title">Gastos do mês por categoria</h2>
+          <h2 className="section-title">{t('monthExpensesByCategory')}</h2>
           {pieData.length === 0 ? (
-            <p className="empty-state">Nenhum gasto registrado este mês.</p>
+            <p className="empty-state">{t('noExpensesThisMonth')}</p>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
@@ -283,7 +282,7 @@ export default function Dashboard() {
 
       <section className="card saldo-card">
         <div className="saldo-card-label">
-          <span>Resultado do mês (ganhos - gastos)</span>
+          <span>{t('monthResult')} ({t('earningsMinusExpenses')})</span>
         </div>
         <p className={`stat-value ${saldoMes < 0 ? 'text-danger' : 'text-success'}`}>{formatCurrency(saldoMes)}</p>
       </section>

@@ -25,3 +25,7 @@ dist-ssr
 
 .vercel
 .env*
+.tools/
+.gradle-home/
+android/keystore.properties
+android/app/app-motorista-upload.jks

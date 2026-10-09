@@ -12,6 +12,7 @@ import {
   sum,
 } from '../lib/utils'
 import type { Ganho, Meta, TipoMeta } from '../types'
+import { useLanguage } from '../contexts/LanguageContext'
 
 const META_CONFIGS: { tipo: TipoMeta; titulo: string; descricao: string }[] = [
   { tipo: 'diaria', titulo: 'Meta diária', descricao: 'Quanto você quer ganhar por dia' },
@@ -21,6 +22,7 @@ const META_CONFIGS: { tipo: TipoMeta; titulo: string; descricao: string }[] = [
 
 export default function Metas() {
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [ganhos, setGanhos] = useState<Ganho[]>([])
   const [metas, setMetas] = useState<Meta[]>([])
   const [values, setValues] = useState<Record<TipoMeta, string>>({ diaria: '', semanal: '', mensal: '' })
@@ -93,7 +95,7 @@ export default function Metas() {
     if (!user) return
     const valor = Number(values[tipo])
     if (!valor || valor <= 0) {
-      setError('Informe um valor maior que zero.')
+      setError(t('missingGoalValue'))
       return
     }
     setSaving(tipo)
@@ -121,15 +123,15 @@ export default function Metas() {
 
     const { data: reloaded } = await supabase.from('metas').select('*').eq('user_id', user.id)
     if (reloaded) setMetas(reloaded)
-    setMessage(`${META_CONFIGS.find((c) => c.tipo === tipo)?.titulo} salva com sucesso!`)
+    setMessage(`${t(tipo === 'diaria' ? 'dailyGoal' : tipo === 'semanal' ? 'weeklyGoal' : 'monthlyGoal')} salva com sucesso!`)
   }
 
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Metas</h1>
-          <p className="page-subtitle">Defina suas metas de ganho diária, semanal e mensal</p>
+          <h1>{t('goals')}</h1>
+          <p className="page-subtitle">{t('goalsSubtitle')}</p>
         </div>
       </header>
 
@@ -137,7 +139,8 @@ export default function Metas() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="metas-grid">
-        {META_CONFIGS.map(({ tipo, titulo, descricao }) => {
+        {META_CONFIGS.map(({ tipo, descricao }) => {
+          const titulo = t(tipo === 'diaria' ? 'dailyGoal' : tipo === 'semanal' ? 'weeklyGoal' : 'monthlyGoal')
           const atual = periodInfo[tipo]
           const meta = metaValor(tipo)
           const progress = meta > 0 ? Math.round(clampPercent((atual / meta) * 100)) : null
@@ -148,13 +151,13 @@ export default function Metas() {
                   <Target size={16} />
                   {titulo}
                 </span>
-                <strong>{meta ? formatCurrency(meta) : 'Sem meta'}</strong>
+                <strong>{meta ? formatCurrency(meta) : t('noGoal')}</strong>
               </div>
               <p className="meta-card-desc">{descricao}</p>
 
               <div className="meta-card-value">
                 <span>{formatCurrency(atual)}</span>
-                <span>ganhos no período atual</span>
+                <span>{t('currentPeriodEarnings')}</span>
               </div>
 
               {progress !== null && (
@@ -167,8 +170,8 @@ export default function Metas() {
                   </div>
                   <p className="meta-card-sub">
                     {progress >= 100
-                      ? 'Meta atingida! Parabéns!'
-                      : `${progress}% da meta - faltam ${formatCurrency(meta - atual)}`}
+                      ? t('goalReached')
+                      : `${progress}% ${t('goalPercent')} - faltam ${formatCurrency(meta - atual)}`}
                   </p>
                 </>
               )}
@@ -181,7 +184,7 @@ export default function Metas() {
                   min="0"
                   value={values[tipo]}
                   onChange={(e) => handleValueChange(tipo, e.target.value)}
-                  placeholder="Valor da meta (R$)"
+                  placeholder={t('goalValue')}
                 />
                 <button
                   type="button"
@@ -190,7 +193,7 @@ export default function Metas() {
                   disabled={saving === tipo}
                 >
                   <Save size={16} />
-                  {saving === tipo ? 'Salvando...' : 'Salvar'}
+                  {saving === tipo ? t('saving') : t('save')}
                 </button>
               </div>
             </div>
