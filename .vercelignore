@@ -1,0 +1,7 @@
+android/
+.gradle-home/
+.tools/
+node_modules/
+dist/
+coverage/
+*.log
