@@ -25,6 +25,7 @@ dist-ssr
 
 .vercel
 .env*
+supabase/.temp/
 .tools/
 .gradle-home/
 android/keystore.properties

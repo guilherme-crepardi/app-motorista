@@ -37,7 +37,37 @@ export default function Gastos() {
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null)
   const [comprovantePreview, setComprovantePreview] = useState<string | null>(null)
   const [viewingImage, setViewingImage] = useState<string | null>(null)
+  const [comprovanteUrls, setComprovanteUrls] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function getComprovantePath(value: string | null): string | null {
+    if (!value) return null
+    const publicMarker = '/object/public/comprovantes/'
+    const signedMarker = '/object/sign/comprovantes/'
+    const marker = value.includes(publicMarker) ? publicMarker : value.includes(signedMarker) ? signedMarker : null
+    if (!marker) return value
+    const [, pathWithQuery] = value.split(marker)
+    return decodeURIComponent(pathWithQuery.split('?')[0])
+  }
+
+  async function resolveComprovanteUrl(value: string | null): Promise<string | null> {
+    const path = getComprovantePath(value)
+    if (!path) return null
+    const { data, error: err } = await supabase.storage.from('comprovantes').createSignedUrl(path, 60 * 60)
+    if (err) return null
+    return data.signedUrl
+  }
+
+  async function loadComprovanteUrls(items: Gasto[]) {
+    const entries = await Promise.all(
+      items
+        .filter((gasto) => gasto.comprovante_url)
+        .map(async (gasto) => [gasto.id, await resolveComprovanteUrl(gasto.comprovante_url)] as const),
+    )
+    setComprovanteUrls(
+      Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => Boolean(entry[1]))),
+    )
+  }
 
   async function load() {
     if (!user) return
@@ -54,7 +84,11 @@ export default function Gastos() {
     }
     const { data, error: err } = await query
     if (err) setError(err.message)
-    else setGastos(data ?? [])
+    else {
+      const items = data ?? []
+      setGastos(items)
+      loadComprovanteUrls(items)
+    }
     setLoading(false)
   }
 
@@ -98,7 +132,7 @@ export default function Gastos() {
       descricao: gasto.descricao ?? '',
     })
     setComprovanteFile(null)
-    setComprovantePreview(gasto.comprovante_url ?? null)
+    setComprovantePreview(comprovanteUrls[gasto.id] ?? null)
     setModalOpen(true)
   }
 
@@ -108,7 +142,7 @@ export default function Gastos() {
     setSaving(true)
     setError('')
 
-    let comprovanteUrl: string | null = editing?.comprovante_url ?? null
+    let comprovanteUrl: string | null = getComprovantePath(editing?.comprovante_url ?? null)
 
     if (comprovanteFile) {
       const ext = comprovanteFile.name.split('.').pop() ?? 'jpg'
@@ -121,8 +155,7 @@ export default function Gastos() {
         setSaving(false)
         return
       }
-      const { data: urlData } = supabase.storage.from('comprovantes').getPublicUrl(path)
-      comprovanteUrl = urlData.publicUrl
+      comprovanteUrl = path
     }
 
     const payload = {
@@ -245,7 +278,7 @@ export default function Gastos() {
                 </div>
                 <div className="gasto-card-actions">
                   {g.comprovante_url && (
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewingImage(g.comprovante_url!)}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewingImage(comprovanteUrls[g.id] ?? null)}>
                       <Image size={15} />
                       {t('view')}
                     </button>
@@ -356,7 +389,7 @@ export default function Gastos() {
                   reader.onload = (ev) => setComprovantePreview(ev.target?.result as string)
                   reader.readAsDataURL(file)
                 } else {
-                  setComprovantePreview(editing?.comprovante_url ?? null)
+                  setComprovantePreview(editing ? comprovanteUrls[editing.id] ?? null : null)
                 }
               }}
             />
