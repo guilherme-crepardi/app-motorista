@@ -618,6 +618,65 @@ select.input {
   font-size: 17px;
 }
 
+/* ---------- Help ---------- */
+
+.help-page {
+  max-width: 760px;
+}
+
+.help-intro {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.help-intro-icon,
+.help-card-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.help-intro strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 17px;
+}
+
+.help-intro p,
+.help-card p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.help-list {
+  display: grid;
+  gap: 10px;
+}
+
+.help-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 14px;
+}
+
+.help-card h2 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.help-card .btn {
+  margin-top: 12px;
+}
+
 .dot {
   width: 12px;
   height: 12px;

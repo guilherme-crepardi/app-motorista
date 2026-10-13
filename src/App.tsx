@@ -13,6 +13,7 @@ import Metas from './pages/Metas'
 import Historico from './pages/Historico'
 import Privacidade from './pages/Privacidade'
 import ExcluirConta from './pages/ExcluirConta'
+import Ajuda from './pages/Ajuda'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/manutencoes" element={<Manutencoes />} />
           <Route path="/metas" element={<Metas />} />
           <Route path="/historico" element={<Historico />} />
+          <Route path="/ajuda" element={<Ajuda />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/ganhos" replace />} />

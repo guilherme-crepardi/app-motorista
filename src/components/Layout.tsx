@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Wallet, Receipt, Target, LogOut, Car, Sun, Moon, CalendarDays, CalendarRange, Wrench, Repeat, Menu, X, History, Globe2, ShieldCheck, Trash2 } from 'lucide-react'
+import { LayoutDashboard, Wallet, Receipt, Target, LogOut, Car, Sun, Moon, CalendarDays, CalendarRange, Wrench, Repeat, Menu, X, History, Globe2, ShieldCheck, Trash2, HelpCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { applyTheme, getInitialTheme, type Theme } from '../lib/theme'
 import { useAuth } from '../contexts/AuthContext'
@@ -19,6 +19,7 @@ const navItems = [
   { to: '/mes', labelKey: 'month', icon: CalendarRange },
   { to: '/manutencoes', labelKey: 'maintenance', icon: Wrench },
   { to: '/historico', labelKey: 'history', icon: History },
+  { to: '/ajuda', labelKey: 'help', icon: HelpCircle },
 ]
 
 export default function Layout() {
