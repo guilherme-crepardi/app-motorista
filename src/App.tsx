@@ -12,12 +12,14 @@ import Manutencoes from './pages/Manutencoes'
 import Metas from './pages/Metas'
 import Historico from './pages/Historico'
 import Privacidade from './pages/Privacidade'
+import ExcluirConta from './pages/ExcluirConta'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/privacidade" element={<Privacidade />} />
+      <Route path="/excluir-conta" element={<ExcluirConta />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/ganhos" replace />} />

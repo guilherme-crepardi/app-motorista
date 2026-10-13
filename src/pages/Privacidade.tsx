@@ -59,8 +59,7 @@ export default function Privacidade() {
 
           <h2>Exclusao de dados</h2>
           <p>
-            O usuario pode solicitar a exclusao dos dados da conta pelo canal de contato informado na pagina do app na
-            Google Play.
+            O usuario pode solicitar a exclusao da conta e dos dados pela pagina publica de exclusao do App Motorista.
           </p>
 
           <h2>Contato</h2>
@@ -70,6 +69,10 @@ export default function Privacidade() {
           </p>
 
           <div className="privacy-actions">
+            <Link className="privacy-action-link" to="/excluir-conta">
+              <LockKeyhole size={18} />
+              Excluir conta e dados
+            </Link>
             <span>
               <LockKeyhole size={18} />
               Dados protegidos por login

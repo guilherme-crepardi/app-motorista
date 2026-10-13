@@ -2025,6 +2025,34 @@ select.input {
   font-weight: 700;
 }
 
+.privacy-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.privacy-action-link:hover {
+  filter: brightness(0.95);
+}
+
+.privacy-steps {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+}
+
+.privacy-steps li + li {
+  margin-top: 6px;
+}
+
 /* ---------- Toolbar filters (mês/semana) ---------- */
 
 .toolbar-filters {

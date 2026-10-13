@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Wallet, Receipt, Target, LogOut, Car, Sun, Moon, CalendarDays, CalendarRange, Wrench, Repeat, Menu, X, History, Globe2, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Wallet, Receipt, Target, LogOut, Car, Sun, Moon, CalendarDays, CalendarRange, Wrench, Repeat, Menu, X, History, Globe2, ShieldCheck, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { applyTheme, getInitialTheme, type Theme } from '../lib/theme'
 import { useAuth } from '../contexts/AuthContext'
@@ -131,6 +131,10 @@ export default function Layout() {
           <NavLink to="/privacidade" className="btn btn-ghost btn-logout">
             <ShieldCheck size={18} />
             <span>Privacidade</span>
+          </NavLink>
+          <NavLink to="/excluir-conta" className="btn btn-ghost btn-logout">
+            <Trash2 size={18} />
+            <span>Excluir conta</span>
           </NavLink>
         </div>
       </aside>
